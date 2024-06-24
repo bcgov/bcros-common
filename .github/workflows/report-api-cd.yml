@@ -19,7 +19,7 @@ on:
           - prod
 
 jobs:
-  namex-emailer-cd:
+  report-api-cd:
     permissions:
       id-token: write
       contents: write
