@@ -24,6 +24,7 @@ deployParameters:
   container-name: "report-api-dev"
   cloudsql-instances: ""
   app-env: "dev"
+  container-port: "5001"
   service-account: "sa-api@c4hnrd-dev.iam.gserviceaccount.com"
 run:
  location: projects/c4hnrd-dev/locations/northamerica-northeast1
@@ -44,6 +45,7 @@ deployParameters:
   container-name: "report-api-test"
   cloudsql-instances: ""
   app-env: "test"
+  container-port: "5001"
   service-account: "sa-api@c4hnrd-test.iam.gserviceaccount.com"
 run:
  location: projects/c4hnrd-test/locations/northamerica-northeast1
@@ -68,7 +70,7 @@ deployParameters:
   service-account: "sa-api@c4hnrd-tools.iam.gserviceaccount.com"
   max-scale: "50"
   container-concurrency: "20"
-  container-port: "8080"
+  container-port: "5001"
   resources-cpu: 4000m
   resources-memory: 8Gi
 run:
@@ -94,7 +96,7 @@ deployParameters:
   service-account: "sa-api@c4hnrd-prod.iam.gserviceaccount.com"
   max-scale: "50"
   container-concurrency: "20"
-  container-port: "8080"
+  container-port: "5001"
   resources-cpu: 4000m
   resources-memory: 8Gi
 run:
