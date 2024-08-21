@@ -1,0 +1,67 @@
+{
+  "breadcrumb": {
+    "documentManagement": "Document Management",
+    "documentIndexing": "Document Indexing"
+  },
+  "title": {
+    "documentManagement": "Document Management",
+    "documentIndexing": "Document Indexing"
+  },
+  "descriptions": {
+    "documentManagement": "Upload registrations through our document indexing service or complete a document search.",
+    "documentIndexing": "Index your documents using our document indexing service for easy access and search."
+  },
+  "button": {
+    "documentIndexing": "Document Indexing"
+  },
+  "documentIndexing": {
+    "label": "Document Indexing Information",
+    "incompleteError": "Please complete required information",
+    "form": {
+      "id": {
+        "label": "Entity ID",
+        "description": "Enter the entity ID of this document filing. The entity ID must be entered if there is one.",
+        "help": "Example: MH107403, BC1234567, CP1234567"
+      },
+      "checkbox": {
+        "label": "I do not have an Entity ID"
+      },
+      "selectMenu": {
+        "label": "Document Information",
+        "categoryLabel": "Document Category",
+        "typeLabel": "Document Type"
+      },
+      "dateSelect": {
+        "label": "Filing Date",
+        "description": "Enter date of filling or the registration date which was entered into BC Registries."
+      }
+    }
+  },
+  "documentUpload": {
+    "title": "Upload Documents",
+    "description": "Upload one or more documents (Optional)",
+    "asideDescription": "Documents to Upload",
+    "placeholder": "Select Documents (Optional)",
+    "help": "File must be a PDF. Maximum 50 MB.",
+    "fileSizeError": "Documents exceeds maximum 50 MB file size",
+    "fileTypeError": "Documents must be of PDF file type"
+  },
+  "documentReview": {
+    "title": "Document Information Saved",
+    "description": "Your document information has been successfully uploaded and saved. To view, complete a search on the document management page using the following information",
+    "labels": {
+      "documentId": "Document ID",
+      "entityId": "Entity ID",
+      "documentCategory": "Document Category",
+      "documentType": "Document Type",
+      "filingDate": "Filing Date",
+      "uploadDate": "Upload Date and Time",
+      "documentsUploaded": "Documents Uploaded",
+      "documentListLabel": "Documents"
+    },
+    "buttonLabels": {
+      "cancel": "Back to Documents Services Page",
+      "downloadReport": "Download Document Record Statement"
+    }
+  }
+}
