@@ -12,7 +12,7 @@
     "lint:fix": "eslint --fix",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "test:unit": "vitest"
+    "test": "vitest"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.22",
