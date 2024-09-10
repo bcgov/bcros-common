@@ -14,7 +14,7 @@ const { documentRecord } = storeToRefs(useBcrosDocuments())
   >
     <div class="app-inner-container h-[100px] content-center">
       <span class="text-[22px] font-bold text-gray-900">
-        {{ $t('documentReview.labels.documentId') + documentRecord.consumerDocumentId }}
+        {{ $t('documentReview.labels.documentId') + ' ' + documentRecord.consumerDocumentId }}
       </span>
     </div>
   </div>
