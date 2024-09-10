@@ -98,7 +98,6 @@
         width: 410px;
         padding-top: 16px;
         text-align: left;
-        padding-bottom: 24px;
         display: inline-block;
       }
 
@@ -390,10 +389,10 @@
       {% include 'report-templates/statement_transactions.html' %}
       {% if statement.payment_methods[0] == 'EFT' %}
       <div class="inner-wrap page-break-before">
+        {% include 'report-templates/statement_header.html' %}
         <h2>Payment Instructions</h2>
       </div>
       {% include 'report-templates/eft/eft_instructions.html' %}
-      {% include 'report-templates/eft/eft_refund_process.html' %}
       {% endif %}
   </body>
 
