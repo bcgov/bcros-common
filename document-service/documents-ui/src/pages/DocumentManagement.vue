@@ -45,7 +45,7 @@ Mauris eget nunc ut dolor rhoncus vehicula. Curabitur molestie eu ante et egesta
         <DocumentSearch />
       </template>
     </BcrosSection>
-
+    <!-- Will remove once the table is reviewed -->
     <div class="grid grid-cols-6 gap-4 mt-6">
       <div class="col-end-7 col-span-1">
         <UButton
@@ -68,7 +68,9 @@ Mauris eget nunc ut dolor rhoncus vehicula. Curabitur molestie eu ante et egesta
     >
       Enter or select search criteria
     </span>
+    <!-- Will remove once the table is reviewed -->
 
+  
     <!-- Document Search Results -->
     <UDivider v-if="documentSearchResults.length" class="pt-[60px] pb-4" />
     <DocumentsTable />
