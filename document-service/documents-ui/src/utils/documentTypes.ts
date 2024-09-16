@@ -177,35 +177,43 @@ export const documentTypes: Array<DocumentClassIF> = [
   }
 ]
 
-export const documentResultColumns = [
-  {
-    key: 'consumerIdentifier',
-    label: 'Entity ID',
-    sortable: true
-  },
-  {
-    key: 'consumerDocumentId',
-    label: 'Document ID',
-    sortable: true
-  },
-  {
-    key: 'documentClass',
-    label: 'Document Category'
-  },
-  {
-    key: 'documentTypeDescription',
-    label: 'Document Type'
-  },
-  {
-    key: 'consumerFilingDateTime',
-    label: 'Filing Date'
-  },
-  {
-    key: 'documentURL',
-    label: 'Documents'
-  },
-  {
-    key: 'actions',
-    label: 'Actions'
-  }
-]
+export const documentResultColumns = () => {
+  const t = useNuxtApp().$i18n.t  
+
+  return [
+    {
+      key: 'emptyColumn',
+      label: t('documentSearch.table.headers.sortBy'),
+      sortable: false
+    },
+    {
+      key: 'consumerDocumentId',
+      label: t('documentSearch.table.headers.documentID'),
+      tooltipText: 'The Document ID, also known as the Barcode Number, is a unique identifier assigned to a document record.',
+      sortable: true
+    },
+    {
+      key: 'consumerIdentifier',
+      label: t('documentSearch.table.headers.entityID'),
+      tooltipText: 'Maecenas sed diam eget risus varius blandit sit amet non magna.',
+      sortable: true
+    },
+    {
+      key: 'documentURL',
+      label: t('documentSearch.table.headers.documents')
+    },
+    {
+      key: 'consumerFilingDateTime',
+      label: t('documentSearch.table.headers.filingDate')
+    },
+    {
+      key: 'documentTypeDescription',
+      label: t('documentSearch.table.headers.documentType')
+    },
+    {
+      key: 'actions',
+      label: t('documentSearch.table.headers.actions')
+    }
+  ]
+  
+}

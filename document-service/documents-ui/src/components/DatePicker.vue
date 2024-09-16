@@ -12,6 +12,10 @@ const props = defineProps({
   isRangedPicker: {
     type: Boolean,
     default: false
+  },
+  isLeftBar: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -35,15 +39,32 @@ const attrs = {
 </script>
 
 <template>
+  <div class="flex">
+  <div 
+    v-if="isLeftBar"
+    class="flex gap-y-3 flex-col px-5 items-start justify-center font-light"
+  >
+    <ULink
+      v-for="(option, i) in datePickerOptions"
+      :key="i"
+      class="block"
+      @click="emit('close')"
+    >
+      {{ option.label }}
+    </ULink>
+
+  </div>
   <VCalendarDatePicker
     v-if="date && isRangedPicker && (typeof date === 'object')"
     v-model.range="date"
     :columns="2"
     v-bind="{ ...attrs, ...$attrs }"
+    size="md"
   />
   <VCalendarDatePicker
     v-else
     v-model="date"
     v-bind="{ ...attrs, ...$attrs }"
   />
+</div>
 </template>

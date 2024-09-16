@@ -82,3 +82,30 @@ export function formatIsoToYYYYMMDD(isoString) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+export const datePickerOptions = [
+  {
+    label: 'Last 7 days',
+    value: ''
+  },
+  {
+    label: 'Last 14 days',
+    value: ''
+  },
+  {
+    label: 'Last 30 days',
+    value: ''
+  },
+  {
+    label: 'Last 3 months',
+    value: ''
+  },
+  {
+    label: 'Last 6 months',
+    value: ''
+  },
+  {
+    label: 'Last year',
+    value: ''
+  },
+]

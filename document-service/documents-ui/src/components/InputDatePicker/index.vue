@@ -17,6 +17,14 @@ const props = defineProps({
   isRangedPicker: {
     type: Boolean,
     default: false
+  },
+  isLeftBar: {
+    type: Boolean,
+    default: false
+  },
+  size: {
+    type: String,
+    default: null
   }
 })
 
@@ -43,12 +51,14 @@ watch(date, (newValue) => {
       icon="i-mdi-calendar"
       :disabled="disabled"
       :trailing="true"
+      :size="size"
     />
 
     <template #panel="{ close }">
       <DatePicker
         v-model="date"
         :is-ranged-picker="isRangedPicker"
+        :is-left-bar = "isLeftBar"
         is-required @close="close"
       />
     </template>
