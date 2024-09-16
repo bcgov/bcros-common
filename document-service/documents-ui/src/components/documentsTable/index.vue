@@ -3,7 +3,7 @@ import { formatToReadableDate } from '~/utils/dateHelper'
 import { documentTypes, documentResultColumns } from '~/utils/documentTypes'
 import type { DocumentInfoIF } from '~/interfaces/document-types-interface'
 const { getDocumentDescription, downloadFileFromUrl } = useDocuments()
-const { documentList, documentRecord, documentSearchResults, searchEntityId } = storeToRefs(useBcrosDocuments())
+const { documentList, documentRecord, documentSearchResults } = storeToRefs(useBcrosDocuments())
 
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   documentRecord.value = { ...searchResult, }
@@ -65,7 +65,7 @@ onMounted(() => {
               <UIcon
                 name="i-mdi-information-outline"
                 class="font-bold w-5 h-5 ml-2"
-              ></UIcon>
+              />
             </UTooltip>
             </div>
             <UDivider class="my-3 w-full"/>
@@ -90,7 +90,7 @@ onMounted(() => {
               <UIcon
                 name="i-mdi-information-outline"
                 class="font-bold w-5 h-5 ml-2"
-              ></UIcon>
+              />
             </UTooltip>
             </div>
             <UDivider class="my-3 w-full"/>
