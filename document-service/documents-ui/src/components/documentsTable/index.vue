@@ -5,15 +5,20 @@ import type { DocumentInfoIF } from '~/interfaces/document-types-interface'
 const { getDocumentDescription, downloadFileFromUrl } = useDocuments()
 const { documentList, documentRecord, documentSearchResults } = storeToRefs(useBcrosDocuments())
 
+const {
+  searchDocumentId,
+  searchEntityId,
+  searchDocumentClass,
+  searchDateRange,
+  isLoading
+} = storeToRefs(useBcrosDocuments())
+
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   documentRecord.value = { ...searchResult, }
   documentList.value = searchResult.consumerFilenames?.map(file => ({ name: file }))
   navigateTo({ name: RouteNameE.DOCUMENT_RECORDS, params: { identifier: searchResult.consumerDocumentId } })
 }
 
-
-const searchDateRange = ref()
-const searchDocumentClass = ref()
 const documentRecordColumns = ref([])
 
 onMounted(() => {
@@ -22,7 +27,6 @@ onMounted(() => {
 </script>
 <template>
   <ContentWrapper
-    v-if="documentSearchResults && !!documentSearchResults.length"
     name="document-search-results"
     class="my-12"
     data-cy="document-search-results"
@@ -43,6 +47,8 @@ onMounted(() => {
           square: false,
           ui: { rounded: 'rounded-full' }
         }"
+        :loading="isLoading"
+        :empty-state="{ icon: 'i-heroicons-circle-stack-20-solid', label: 'No document records.' }"
       > 
         <template #emptyColumn-header = "{column}">
           <div class="uppercase font-light text-gray-600">
@@ -71,6 +77,7 @@ onMounted(() => {
             <UDivider class="my-3 w-full"/>
             <div class="h-8">
               <UInput
+                v-model="searchDocumentId"
                 class="w-full px-2 font-light"
                 size="md"
                 :placeholder="column.label"
@@ -96,6 +103,7 @@ onMounted(() => {
             <UDivider class="my-3 w-full"/>
             <div class="h-8">
               <UInput
+                v-model="searchEntityId"
                 class="w-full px-2 font-light"
                 size="md"
                 :placeholder="column.label"
@@ -144,7 +152,7 @@ onMounted(() => {
           <div class="h-8">
             <USelectMenu
                 v-model="searchDocumentClass"
-                class="px-2 font-light"
+                class="w-full px-2 font-light"
                 select-class="text-gray-700"
                 :options="documentTypes"
                 value-attribute="class"
@@ -161,8 +169,7 @@ onMounted(() => {
           </div>
           <UDivider class="my-3"/>
           <div>
-          <div class="h-8">
-          </div>
+          <div class="h-8" />
         </div>
         </template>
 
@@ -178,7 +185,8 @@ onMounted(() => {
 
         <!-- Document URL -->
         <template #documentURL-data="{ row }">
-          <span
+          <div v-if="row.consumerFilenames.length > 1">
+            <span
             v-for="(file, i) in row.consumerFilenames"
             :key="`file-${i}`"
             class="block my-1"
@@ -192,9 +200,7 @@ onMounted(() => {
               {{ file }}
             </ULink>
           </span>
-          <span
-            v-if="row.consumerFilenames.length > 1"
-          >
+          <span>
              <ULink
                inactive-class="text-primary"
                class="flex align-center"
@@ -203,8 +209,21 @@ onMounted(() => {
               {{ $t('documentSearch.table.downloadAll') }}
             </ULink>
           </span>
+          </div>
+          <div v-else>
+            <span class="block my-1">  
+             <ULink
+               inactive-class="text-primary"
+               class="flex align-center"
+               @click="downloadFileFromUrl(row.documentUrls[0], row.consumerFilenames[0])"
+             >
+              <UIcon name="i-mdi-file-download" class="w-5 h-5" />
+              {{ row.consumerFilenames[0] }}
+            </ULink>
+          </span>
+          </div>
+          
         </template>
-
         <!-- Actions -->
         <template #actions-data="{ row }">
           <UButton

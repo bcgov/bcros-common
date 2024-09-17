@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { DatePicker as VCalendarDatePicker } from 'v-calendar'
 import type { DatePickerDate, DatePickerRangeObject } from 'v-calendar/dist/types/src/use/datePicker'
+import { calculatePreviousDate } from '~/utils/dateHelper'
 import 'v-calendar/dist/style.css'
 import type { PropType } from 'vue'
 
@@ -29,6 +30,14 @@ const date = computed({
   }
 })
 
+const handleSideBar = (option) => {
+  emit('update:model-value', {
+    start: calculatePreviousDate(option),
+    end: new Date()
+  })
+  emit('close')
+}
+
 const attrs = {
   transparent: false,
   borderless: false,
@@ -48,7 +57,7 @@ const attrs = {
       v-for="(option, i) in datePickerOptions"
       :key="i"
       class="block"
-      @click="emit('close')"
+      @click="handleSideBar(option.value)"
     >
       {{ option.label }}
     </ULink>

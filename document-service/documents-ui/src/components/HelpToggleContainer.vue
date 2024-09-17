@@ -1,13 +1,24 @@
 <script setup lang="ts">
-  const isHelpContentOpen = ref(false)
-  const hasBottomHideToggle = ref(true)
+
+const props = defineProps({
+  isHelpContentOpen: {
+    type: Boolean,
+    default: false
+  },
+  hasBottomHideToggle: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['toggleHelpContent'])
 </script>
 
 <template>
   <div class="my-2">
     <ULink
       class="flex items-center text-primary font-bold"
-      @click="isHelpContentOpen = !isHelpContentOpen"
+      @click="emit('toggleHelpContent')"
     >
     <UIcon
       name="i-mdi-help-circle-outline"
@@ -16,18 +27,18 @@
       <p>{{ $t('documentSearch.helpTitle.inactive') }}</p>
     </ULink>
     <div>
-      <div v-show="isHelpContentOpen">
+      <div v-show="props.isHelpContentOpen">
         <slot
           name="content"
           class="text-light"
         />
         <div
-          v-if="hasBottomHideToggle"
+          v-if="props.hasBottomHideToggle"
           class="float-right"
         >
           <ULink
             class="text-primary text-light underline"
-            @click="isHelpContentOpen = !isHelpContentOpen"
+            @click="emit"
           >
           {{ $t('documentSearch.helpTitle.active') }}
           </ULink>

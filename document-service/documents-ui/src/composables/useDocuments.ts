@@ -165,11 +165,12 @@ export const useDocuments = () => {
       && !!consumerFilingDate.value
   })
 
+  const debouncedSearch = debounce(searchDocuments)
+
   /** Validate and Save Document Indexing */
   const saveDocuments = async (): Promise<void> => {
     // Validate Document Indexing
     validateIndex.value = true
-
     if (isValidIndexData.value) {
       isLoading.value = true
 
@@ -237,6 +238,7 @@ export const useDocuments = () => {
     searchDocuments,
     downloadFileFromUrl,
     hasMinimumSearchCriteria,
-    saveDocuments
+    saveDocuments,
+    debouncedSearch
   }
 }

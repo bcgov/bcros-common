@@ -189,7 +189,8 @@ export const documentResultColumns = () => {
     {
       key: 'consumerDocumentId',
       label: t('documentSearch.table.headers.documentID'),
-      tooltipText: 'The Document ID, also known as the Barcode Number, is a unique identifier assigned to a document record.',
+      tooltipText: `The Document ID, also known as the Barcode Number, 
+                is a unique identifier assigned to a document record.`,
       sortable: true
     },
     {
@@ -203,12 +204,12 @@ export const documentResultColumns = () => {
       label: t('documentSearch.table.headers.documents')
     },
     {
-      key: 'consumerFilingDateTime',
-      label: t('documentSearch.table.headers.filingDate')
-    },
-    {
       key: 'documentTypeDescription',
       label: t('documentSearch.table.headers.documentType')
+    },
+    {
+      key: 'consumerFilingDateTime',
+      label: t('documentSearch.table.headers.filingDate')
     },
     {
       key: 'actions',
@@ -217,3 +218,33 @@ export const documentResultColumns = () => {
   ]
   
 }
+
+export const documentRecordHelpContent = `
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+  Quisque maximus turpis luctus, 
+  finibus dolor non, cursus nulla. 
+  Nulla laoreet neque vestibulum malesuada luctus. 
+  Donec fringilla metus neque,
+  et hendrerit mi lacinia sed. Mauris eu euismod purus. 
+  In lacinia nunc vel est placerat sodales a porttitor sem. 
+  Sed tincidunt ligula nec odio iaculis, 
+  in imperdiet dolor facilisis. Nam in varius turpis. 
+  Vestibulum dignissim ipsum vel dui feugiat rhoncus. 
+  Cras hendrerit lacinia arcu vitae posuere. 
+  Phasellus vitae erat vel diam congue semper. 
+  Nam vel mollis ex. Pellentesque augue augue, 
+  blandit vestibulum arcu sit amet, 
+  interdum lacinia lectus. Suspendisse eleifend lectus lorem, 
+  tristique tincidunt lorem egestas non. Sed et rutrum justo. Proin est nunc, 
+  luctus at est eget, rhoncus auctor enim.
+  Mauris eget nunc ut dolor rhoncus vehicula. 
+  Curabitur molestie eu ante et egestas. Etiam vitae laoreet tellus, et interdum elit. 
+  Fusce vitae rhoncus lorem, id mattis purus. 
+  Sed porttitor magna nec urna bibendum, sit amet blandit justo tristique. 
+  Suspendisse at turpis vel elit posuere elementum et quis libero. 
+  Aliquam vehicula dignissim maximus. Quisque accumsan iaculis euismod. 
+  Maecenas magna eros, auctor et consequat ac, pretium eget leo. 
+  Pellentesque in mauris dictum, elementum purus sed, sollicitudin dui. 
+  Donec purus odio, commodo sed commodo a, rhoncus eu turpis. 
+  Nullam porta maximus orci non ullamcorper.
+`
