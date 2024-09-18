@@ -6,6 +6,7 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
   const getDefaultState = (): DocumentStateIF => ({
     // Document Search
     searchDocumentId: '',
+    searchDocuments: '',
     searchEntityId: '',
     searchDocumentClass: '',
     searchDocumentType: '',

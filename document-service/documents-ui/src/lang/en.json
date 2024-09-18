@@ -54,7 +54,8 @@
         "documentType": "Document Type",
         "actions": "Actions"
       },
-      "downloadAll": "Download All"
+      "downloadAll": "Download All",
+      "noResult": "No results found."
     }
   },
   "documentIndexing": {

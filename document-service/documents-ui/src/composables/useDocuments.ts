@@ -230,6 +230,13 @@ export const useDocuments = () => {
     }
   }
 
+  watch(() => searchEntityId.value, (id: string) => {
+    // Format Entity Identifier
+    searchEntityId.value = id.replace(/\s+/g, '')?.toUpperCase()
+    // Assign and populate a prefix if a match is found
+    if (id.length >= 1) findCategoryByPrefix(id, true)
+  })
+
   return {
     isValidIndexData,
     findCategoryByPrefix,
