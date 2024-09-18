@@ -55,7 +55,8 @@
         "actions": "Actions"
       },
       "downloadAll": "Download All",
-      "noResult": "No results found."
+      "noResult": "No results found.",
+      "clearFilter": "Clear Filter"
     }
   },
   "documentIndexing": {

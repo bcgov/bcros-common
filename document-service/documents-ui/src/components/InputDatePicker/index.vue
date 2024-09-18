@@ -55,7 +55,7 @@ const datePlaceholder = computed(() => {
 
 </script>
 <template>
-  <UPopover :popper="{ placement: 'bottom-start' }">
+  <UPopover :popper="{ placement: 'bottom-start' }" v-model="open">
     <UInput
       class="w-full"
       :placeholder="date ? datePlaceholder : 'Filing Date'"
@@ -66,14 +66,15 @@ const datePlaceholder = computed(() => {
       :size="size"
       :ui="{ icon: { trailing: { pointer: '' } } }"
     >
-      <template #trailing v-if="isFilter">
+      <template #trailing>
         <UButton
+          v-if="isFilter"
           v-show="date !== null"
           color="gray"
           variant="link"
           icon="i-mdi-cancel-circle text-primary"
           :padded="false"
-          @click="date = null"
+          @click="emit('update:modelValue', null)"
         />
       </template>
     </UInput>

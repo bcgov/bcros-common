@@ -7,9 +7,10 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
     // Document Search
     searchDocumentId: '',
     searchDocuments: '',
-    searchEntityId: '',
-    searchDocumentClass: '',
-    searchDocumentType: '',
+    // Pre-populated these values for review purpose.
+    searchEntityId: 'NR123',
+    searchDocumentClass: 'NR',
+    searchDocumentType: 'NR_MISC',
     searchDateRange: { start: null, end: null },
 
     // Document Meta

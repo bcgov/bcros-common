@@ -28,13 +28,12 @@ const filerValue = computed({
       {{ column.label }}
       <UTooltip
         v-if="column.tooltipText"
-        :popper="{ placement: 'top', arrow: true }"
+        :popper="{ placement: 'top', arrow: true}"
         :text="column.tooltipText"
-        class="w-20"
       >
         <UIcon
           name="i-mdi-information-outline"
-          class="font-bold w-5 h-5 ml-2"
+          class="font-bold w-5 h-5 mx-2"
         />
       </UTooltip>
     </div>

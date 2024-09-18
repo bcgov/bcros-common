@@ -2,20 +2,33 @@
 import { formatToReadableDate } from "~/utils/dateHelper";
 import { documentTypes, documentResultColumns } from "~/utils/documentTypes";
 import type { DocumentInfoIF } from "~/interfaces/document-types-interface";
-const { getDocumentDescription, downloadFileFromUrl } = useDocuments();
-const { documentList, documentRecord, documentSearchResults } = storeToRefs(
-  useBcrosDocuments()
-);
+const {
+  getDocumentDescription,
+  downloadFileFromUrl,
+  searchDocumentRecords,
+  getDocumentTypesByClass,
+} = useDocuments();
 
 const {
+  documentList,
+  documentRecord,
+  documentSearchResults,
   searchDocumentId,
   searchEntityId,
   searchDocuments,
-  searchDocumentClass,
+  searchDocumentType,
   searchDateRange,
   isLoading,
 } = storeToRefs(useBcrosDocuments());
-
+const isFiltered = computed(() => {
+  return (
+    !!searchDocumentId.value ||
+    !!searchEntityId.value ||
+    !!searchDocuments.value ||
+    !!searchDocumentType.value ||
+    !!searchDateRange.value
+  );
+});
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   documentRecord.value = { ...searchResult };
   documentList.value = searchResult.consumerFilenames?.map((file) => ({
@@ -31,6 +44,7 @@ const documentRecordColumns = ref([]);
 
 onMounted(() => {
   documentRecordColumns.value = documentResultColumns();
+  searchDocumentRecords();
 });
 </script>
 <template>
@@ -116,24 +130,24 @@ onMounted(() => {
           <div>
             <div class="h-8">
               <USelectMenu
-                v-model="searchDocumentClass"
+                v-model="searchDocumentType"
+                :placeholder="column.label"
                 class="w-full px-2 font-light"
                 select-class="text-gray-700"
-                :options="documentTypes"
-                value-attribute="class"
+                :options="getDocumentTypesByClass()"
+                value-attribute="type"
                 option-attribute="description"
                 size="md"
-                :placeholder="column.label"
                 :ui="{ icon: { trailing: { pointer: '' } } }"
               >
                 <template #trailing>
                   <UButton
-                    v-show="searchDocumentClass !== ''"
+                    v-show="searchDocumentType !== ''"
                     color="gray"
                     variant="link"
                     icon="i-mdi-cancel-circle text-primary"
                     :padded="false"
-                    @click="searchDocumentClass = ''"
+                    @click="searchDocumentType = ''"
                   />
                 </template>
               </USelectMenu>
@@ -146,7 +160,16 @@ onMounted(() => {
           </div>
           <UDivider class="my-3" />
           <div>
-            <div class="h-8" />
+            <div class="flex justify-center h-8">
+              <UButton
+                v-if="isFiltered"
+                class="h-[35px] px-3 py-3 text-sm"
+                :label="$t('documentSearch.table.clearFilter')"
+                icon="i-mdi-cancel-circle"
+                variant="outline"
+                color="primary"
+              />
+            </div>
           </div>
         </template>
 

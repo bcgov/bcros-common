@@ -93,7 +93,7 @@ export default defineAppConfig({
         padding: "px-0"
       },
       td: {
-        base: 'align-top h-[65px] last:block whitespace-normal',
+        base: 'align-top h-[65px] last:flex last:justify-center whitespace-normal',
         color: 'text-gray-700',
       }
     }
