@@ -29,7 +29,7 @@ clean:
 
 # Install Python virtual environment
 venv:
-	python3 -m venv $(VENV_DIR)
+	python3.12 -m venv $(VENV_DIR)
 
 ##################################
 # Initial setup                  #
@@ -38,10 +38,10 @@ setup: clean install update-schemas
 
 # re-install packages
 install: venv
+	$(shell mkdir -p demo_output)
 	$(shell . venv/bin/activate)
 	$(PIP) install --upgrade pip 
 	$(PIP) install -r requirements.txt 
-	$(shell mkdir -p demo_output) 
 	$(PIP) install -e . 
 
 # Download / update Business Schemas JSON files

@@ -5,7 +5,7 @@ BC Registries PDF Form Auto Generation
 Generate latest version of filing PDF forms based on latest Business Schemas.
 
 ## Technology Stack Used
-- Python, ReportLab, Flask(planned, not yet implemented)
+- Python 3.12, ReportLab, Flask(planned, not yet implemented)
 
 ## Project Status
 As of 2024-09-19 in **Development**
@@ -13,6 +13,8 @@ As of 2024-09-19 in **Development**
 ## Development Environment
 Follow the instructions of the [Development Readme](https://github.com/bcgov/entity/blob/master/docs/development.md)
 to setup your local development environment.
+- Make sure you have Python 3.12 installed. You can check `python3.12 --version` 
+- Make sure you have pyenv 3.12 installed. You can check `pyenv versions`
 
 ## Development Setup
 1. Follow the [instructions](https://github.com/bcgov/entity/blob/master/docs/setup-forking-workflow.md) to checkout the project from GitHub.
