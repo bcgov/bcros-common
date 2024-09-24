@@ -193,10 +193,11 @@ export const useDocuments = () => {
       && description.value.length <= 1000
   })
 
+  /** Computed value that checks if search result has next page */
   const hasMorePages = computed(() => {
-  
     return Math.ceil(searchResultCount.value / pageSize) > pageNumber.value
   })
+
   const debouncedSearch = debounce(searchDocumentRecords);
 
   /** Validate and Save Document Indexing */
@@ -291,13 +292,14 @@ export const useDocuments = () => {
     }
   }
 
+  /** Get next page of document records if exists */
   const getNextDocumentsPage = () => {
     if(hasMorePages) {
       pageNumber.value += 1
       searchDocumentRecords()
     }
   } 
-  
+
   watch(() => searchEntityId.value, (id: string) => {
     // Format Entity Identifier
     searchEntityId.value = id.replace(/\s+/g, '')?.toUpperCase()
