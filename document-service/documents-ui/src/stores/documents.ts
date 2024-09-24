@@ -5,13 +5,14 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
   // Function to return default values
   const getDefaultState = (): DocumentStateIF => ({
     // Document Search
+    searchResultCount: 0,
     searchDocumentId: '',
     searchDocuments: '',
-    // Pre-populated these values for review purpose.
-    searchEntityId: 'NR123',
-    searchDocumentClass: 'NR',
-    searchDocumentType: 'NR_MISC',
+    searchEntityId: '',
+    searchDocumentClass: '',
+    searchDocumentType: '',
     searchDateRange: { start: null, end: null },
+    pageNumber: 0,
 
     // Document Meta
     consumerIdentifier: '',
@@ -25,8 +26,7 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
     // Validations
     validateIndex: false,
     isLoading: false,
-    validateDocumentSearch: false,
-
+    
     // Document Review
     displayDocumentReview: false,
     documentInfoRO: null as DocumentInfoIF,

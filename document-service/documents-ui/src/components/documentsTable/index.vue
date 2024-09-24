@@ -1,25 +1,32 @@
 <script setup lang="ts">
 import { formatToReadableDate } from "~/utils/dateHelper";
-import { documentTypes, documentResultColumns } from "~/utils/documentTypes";
+import { documentResultColumns } from "~/utils/documentTypes";
 import type { DocumentInfoIF } from "~/interfaces/document-types-interface";
+
 const {
   getDocumentDescription,
   downloadFileFromUrl,
   searchDocumentRecords,
   getDocumentTypesByClass,
+  tempSearchResult,
 } = useDocuments();
 
 const {
   documentList,
   documentRecord,
-  documentSearchResults,
+  // documentSearchResults,
   searchDocumentId,
   searchEntityId,
   searchDocuments,
   searchDocumentType,
   searchDateRange,
   isLoading,
+  pageNumber,
 } = storeToRefs(useBcrosDocuments());
+
+const documentRecordsTableRef = ref(null);
+const documentRecordColumns = ref([]);
+
 const isFiltered = computed(() => {
   return (
     !!searchDocumentId.value ||
@@ -29,6 +36,7 @@ const isFiltered = computed(() => {
     !!searchDateRange.value
   );
 });
+
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   documentRecord.value = { ...searchResult };
   documentList.value = searchResult.consumerFilenames?.map((file) => ({
@@ -40,11 +48,33 @@ const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   });
 };
 
-const documentRecordColumns = ref([]);
+const handleTableScroll = () => {
+  if (documentRecordsTableRef.value) {
+    const scrollTop = documentRecordsTableRef.value.$el.scrollTop;
+    const scrollHeight = documentRecordsTableRef.value.$el.scrollHeight;
+    const clientHeight = documentRecordsTableRef.value.$el.clientHeight;
+
+    if (scrollTop + clientHeight >= scrollHeight) {
+      pageNumber.value += 1;
+    }
+  }
+};
 
 onMounted(() => {
   documentRecordColumns.value = documentResultColumns();
   searchDocumentRecords();
+
+  const tableElement = documentRecordsTableRef.value?.$el;
+  if (tableElement) {
+    tableElement.addEventListener("scroll", handleTableScroll);
+  }
+});
+
+onBeforeUnmount(() => {
+  const tableElement = documentRecordsTableRef.value?.$el;
+  if (tableElement) {
+    tableElement.removeEventListener("scroll", handleTableScroll);
+  }
 });
 </script>
 <template>
@@ -60,9 +90,10 @@ onMounted(() => {
     </template>
     <template #content>
       <UTable
+        ref="documentRecordsTableRef"
         class="mt-8"
         :columns="documentRecordColumns"
-        :rows="documentSearchResults || []"
+        :rows="tempSearchResult || []"
         :sort-button="{
           class: 'font-bold text-sm',
           size: '2xs',
@@ -88,20 +119,20 @@ onMounted(() => {
         </template>
         <template #consumerDocumentId-header="{ column }">
           <DocumentsTableInputHeader
-            :column="column"
             v-model="searchDocumentId"
+            :column="column"
           />
         </template>
         <template #consumerIdentifier-header="{ column }">
           <DocumentsTableInputHeader
-            :column="column"
             v-model="searchEntityId"
+            :column="column"
           />
         </template>
         <template #documentURL-header="{ column }">
           <DocumentsTableInputHeader
-            :column="column"
             v-model="searchDocuments"
+            :column="column"
           />
         </template>
         <template #consumerFilingDateTime-header="{ column }">

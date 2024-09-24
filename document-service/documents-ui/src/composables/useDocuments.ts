@@ -1,8 +1,15 @@
-import { useBcrosDocuments } from '~/stores/documents'
-import { getDocuments, postDocument } from '~/utils/documentRequests'
-import type { ApiResponseIF, ApiResponseOrError, DocumentRequestIF } from '~/interfaces/request-interfaces'
-import type { DocumentDetailIF, DocumentInfoIF } from '~/interfaces/document-types-interface'
-import { formatIsoToYYYYMMDD } from '~/utils/dateHelper'
+import { useBcrosDocuments } from "~/stores/documents";
+import { getDocuments, postDocument } from "~/utils/documentRequests";
+import type {
+  ApiResponseIF,
+  ApiResponseOrError,
+  DocumentRequestIF,
+} from "~/interfaces/request-interfaces";
+import type {
+  DocumentDetailIF,
+  DocumentInfoIF,
+} from "~/interfaces/document-types-interface";
+import { formatIsoToYYYYMMDD } from "~/utils/dateHelper";
 
 export const useDocuments = () => {
   const {
@@ -15,27 +22,34 @@ export const useDocuments = () => {
     isLoading,
     documentInfoRO,
     displayDocumentReview,
+    searchResultCount,
     searchDocumentId,
     searchEntityId,
     searchDocumentClass,
     searchDocumentType,
-    validateDocumentSearch,
     documentSearchResults,
-    searchDateRange
-  } = storeToRefs(useBcrosDocuments())
+    searchDateRange,
+    pageNumber,
+  } = storeToRefs(useBcrosDocuments());
 
   /**
    * Retrieves document descriptions for the specified category
    * @param documentClass - The document class for which to retrieve documents
    * @returns An array of document descriptions or an empty array if the category is not found
    */
-  function getDocumentTypesByClass(documentClass: string = undefined): Array<DocumentDetailIF>|[]  {
-    return documentClass 
-    ? documentTypes.find(doc => doc.class === documentClass)?.documents || []
-    : documentTypes.reduce((docTypes: Array<DocumentDetailIF>, currentValue) => {
-      docTypes.push(...currentValue.documents); // Assuming currentValue.documents is an array
-      return docTypes;
-    }, [])
+  function getDocumentTypesByClass(
+    documentClass: string = undefined
+  ): Array<DocumentDetailIF> | [] {
+    return documentClass
+      ? documentTypes.find((doc) => doc.class === documentClass)?.documents ||
+          []
+      : documentTypes.reduce(
+          (docTypes: Array<DocumentDetailIF>, currentValue) => {
+            docTypes.push(...currentValue.documents); // Assuming currentValue.documents is an array
+            return docTypes;
+          },
+          []
+        );
   }
 
   /**
@@ -45,16 +59,19 @@ export const useDocuments = () => {
    * @param isType - Boolean indicating whether the value is a type or class. Defaults to false (class).
    * @returns The description of the class or type if found, otherwise undefined.
    */
-  function getDocumentDescription(value: string, isType = false): string | undefined {
-    const docClass = documentTypes.find(docClass =>
+  function getDocumentDescription(
+    value: string,
+    isType = false
+  ): string | undefined {
+    const docClass = documentTypes.find((docClass) =>
       isType
-        ? docClass.documents.some(doc => doc.type === value)
+        ? docClass.documents.some((doc) => doc.type === value)
         : docClass.class === value
-    )
+    );
 
     return isType
-      ? docClass?.documents.find(doc => doc.type === value)?.description
-      : docClass?.description
+      ? docClass?.documents.find((doc) => doc.type === value)?.description
+      : docClass?.description;
   }
 
   /**
@@ -63,24 +80,22 @@ export const useDocuments = () => {
    * @param isSearch - Flag to determine if the search is for the search form.
    * @returns The category associated with the prefix or null if no match is found.
    */
-  function findCategoryByPrefix(identifier: string, isSearch: boolean = false): void {
-    const match = identifier.match(/^([A-Za-z]+)\d*/)
-    const prefix = match ? match[1].toUpperCase() : '' // Extract prefix
+  function findCategoryByPrefix(
+    identifier: string,
+    isSearch: boolean = false
+  ): void {
+    const match = identifier.match(/^([A-Za-z]+)\d*/);
+    const prefix = match ? match[1].toUpperCase() : ""; // Extract prefix
 
     for (const documentType of documentTypes) {
       if (documentType.prefixes.includes(prefix)) {
         !isSearch
-          ? documentClass.value = documentType.class
-          : searchDocumentClass.value = documentType.class
-        return
+          ? (documentClass.value = documentType.class)
+          : (searchDocumentClass.value = documentType.class);
+        return;
       }
     }
   }
-
-  /** Computed flag to check if there are no search criteria **/
-  const hasMinimumSearchCriteria = computed(() => {
-    return searchDocumentClass.value && (searchDocumentId.value || searchEntityId.value)
-  })
 
   /**
    * Removes duplicate documents based on consumerDocumentId and aggregates filenames.
@@ -88,59 +103,83 @@ export const useDocuments = () => {
    * @returns {Array} Array of unique documents with aggregated filenames.
    */
   function consolidateDocIds(docs: Array<DocumentRequestIF>) {
-    const map = new Map()
+    const map = new Map();
 
-    docs.forEach(doc => {
-      const { consumerDocumentId, consumerFilename, documentURL, ...rest } = doc
+    docs.forEach((doc) => {
+      const { consumerDocumentId, consumerFilename, documentURL, ...rest } =
+        doc;
 
       if (!map.has(consumerDocumentId)) {
         map.set(consumerDocumentId, {
           consumerDocumentId,
           consumerFilenames: [consumerFilename],
-          documentUrls: [documentURL],
-          ...rest
-        })
+          documentUrls: documentURL ? [documentURL] : ["https://google.com"],
+          ...rest,
+        });
       } else {
-        const existingDoc = map.get(consumerDocumentId)
+        const existingDoc = map.get(consumerDocumentId);
         if (consumerFilename) {
-          existingDoc.consumerFilenames.push(consumerFilename)
+          existingDoc.consumerFilenames.push(consumerFilename);
         }
         if (documentURL) {
-          existingDoc.documentUrls.push(documentURL)
+          existingDoc.documentUrls.push(documentURL);
+        } else {
+          existingDoc.documentUrls.push("https://google.com");
         }
       }
-    })
+    });
 
-    return Array.from(map.values())
+    return Array.from(map.values()) as Array<DocumentRequestIF>;
   }
+
+  // For test only
+  function chunkArray(arr, chunkSize: number = 20) {
+    const result = [];
+
+    for (let i = 0; i < arr.length; i += chunkSize) {
+      result.push(arr.slice(i, i + chunkSize));
+    }
+
+    return result;
+  }
+
+  const tempSearchResult = computed(() => {
+    const result = [];
+    if (documentSearchResults.value.length > 0) {
+      const chunkArraies = chunkArray(documentSearchResults.value);
+      for (let i = 0; i <= pageNumber.value; i++) {
+        if (i < chunkArraies.length) {
+          result.push(...chunkArraies[i]);
+        }
+      }
+    }
+    return result;
+  });
 
   /** Validate and Search Documents **/
   const searchDocumentRecords = async (): Promise<void> => {
-    validateDocumentSearch.value = true
+    try {
+      isLoading.value = true;
+      const response: ApiResponseIF = (await getDocuments({
+        consumerDocumentId: searchDocumentId.value,
+        consumerIdentifier: searchEntityId.value,
+        documentClass: searchDocumentClass.value,
+        documentType: searchDocumentType.value,
+        ...(searchDateRange.value?.end && {
+          queryStartDate: formatIsoToYYYYMMDD(searchDateRange.value.start),
+          queryEndDate: formatIsoToYYYYMMDD(searchDateRange.value.end),
+        }),
+      })) as ApiResponseIF;
+      isLoading.value = false;
 
-    if (hasMinimumSearchCriteria.value) {
-      try {
-        isLoading.value = true
-        const response: ApiResponseIF = await getDocuments(
-          {
-            consumerDocumentId: searchDocumentId.value,
-            consumerIdentifier: searchEntityId.value,
-            documentClass: searchDocumentClass.value,
-            documentType: searchDocumentType.value,
-            ...(searchDateRange.value?.end && {
-              queryStartDate: formatIsoToYYYYMMDD(searchDateRange.value.start),
-              queryEndDate: formatIsoToYYYYMMDD(searchDateRange.value.end)
-            })
-          }
-        ) as ApiResponseIF
-        isLoading.value = false
-        documentSearchResults.value = consolidateDocIds(response.data.value)
-      }
-      catch (error) {
-        console.error('Request failed:', error)
-      }
+      searchResultCount.value = response.data.value.resultCount;
+      documentSearchResults.value = consolidateDocIds(
+        response.data.value.results
+      );
+    } catch (error) {
+      console.error("Request failed:", error);
     }
-  }
+  };
 
   /**
    * Downloads a file from the given URL.
@@ -149,42 +188,44 @@ export const useDocuments = () => {
    * @param {string} filename - The name to save the file as.
    */
   function downloadFileFromUrl(url: string, filename: string): void {
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.target = '_blank' // This opens the link in a new browser tab
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank"; // This opens the link in a new browser tab
 
     // Append to the document and trigger the download
-    document.body.appendChild(link)
-    link.click()
+    document.body.appendChild(link);
+    link.click();
 
     // Remove the link after the download is triggered
-    document.body.removeChild(link)
+    document.body.removeChild(link);
   }
 
   /** Computed validation flag to check for required document meta data **/
   const isValidIndexData = computed(() => {
-    return !!consumerIdentifier.value
-      && !!documentClass.value
-      && !!documentType.value
-      && !!consumerFilingDate.value
-  })
+    return (
+      !!consumerIdentifier.value &&
+      !!documentClass.value &&
+      !!documentType.value &&
+      !!consumerFilingDate.value
+    );
+  });
 
-  const debouncedSearch = debounce(searchDocumentRecords)
+  const debouncedSearch = debounce(searchDocumentRecords);
 
   /** Validate and Save Document Indexing */
   const saveDocuments = async (): Promise<void> => {
     // Validate Document Indexing
-    validateIndex.value = true
+    validateIndex.value = true;
     if (isValidIndexData.value) {
-      isLoading.value = true
+      isLoading.value = true;
 
       // Initialize an object to hold the consolidated data
       const consolidatedResponse = {
         data: null as DocumentInfoIF,
         fileNames: [] as string[],
-        consumerDocumentId: '', // To store the consumerDocumentID from the first request
-      }
+        consumerDocumentId: "", // To store the consumerDocumentID from the first request
+      };
 
       try {
         // Iterate over the document list and handle requests sequentially
@@ -198,49 +239,60 @@ export const useDocuments = () => {
               consumerFilename: document.name,
               // If a consumerDocumentId is needed for subsequent requests, it can be added here
               ...(consolidatedResponse.consumerDocumentId && {
-                consumerDocumentId: consolidatedResponse.consumerDocumentId
-              })
+                consumerDocumentId: consolidatedResponse.consumerDocumentId,
+              }),
             },
             document
-          )
+          );
 
-          if ('data' in response) {
+          if ("data" in response) {
             // Store the data only once (assuming all successful responses have identical data)
             if (!consolidatedResponse.data) {
-              consolidatedResponse.data = response.data.value
+              consolidatedResponse.data = response.data.value;
               // Store the consumerDocumentId from the first request
-              consolidatedResponse.consumerDocumentId = response.data.value.consumerDocumentId
+              consolidatedResponse.consumerDocumentId =
+                response.data.value.consumerDocumentId;
             }
 
             // Add the document name to the fileNames array
-            consolidatedResponse.fileNames.push(document.name)
-
+            consolidatedResponse.fileNames.push(document.name);
           } else {
-            console.warn('Error:', response.message, response.status, response.statusText)
-            isLoading.value = false
-            return // Exit if there is an error in any request
+            console.warn(
+              "Error:",
+              response.message,
+              response.status,
+              response.statusText
+            );
+            isLoading.value = false;
+            return; // Exit if there is an error in any request
           }
         }
 
         // Store the consolidated result after all requests have completed
-        documentInfoRO.value = { ...consolidatedResponse.data, filenames: consolidatedResponse.fileNames }
+        documentInfoRO.value = {
+          ...consolidatedResponse.data,
+          filenames: consolidatedResponse.fileNames,
+        };
 
         // Display the document review
-        isLoading.value = false
-        displayDocumentReview.value = true
+        isLoading.value = false;
+        displayDocumentReview.value = true;
       } catch (error) {
-        console.error('Request failed:', error)
-        isLoading.value = false
+        console.error("Request failed:", error);
+        isLoading.value = false;
       }
     }
-  }
+  };
 
-  watch(() => searchEntityId.value, (id: string) => {
-    // Format Entity Identifier
-    searchEntityId.value = id.replace(/\s+/g, '')?.toUpperCase()
-    // Assign and populate a prefix if a match is found
-    if (id.length >= 1) findCategoryByPrefix(id, true)
-  })
+  watch(
+    () => searchEntityId.value,
+    (id: string) => {
+      // Format Entity Identifier
+      searchEntityId.value = id.replace(/\s+/g, "")?.toUpperCase();
+      // Assign and populate a prefix if a match is found
+      if (id.length >= 1) findCategoryByPrefix(id, true);
+    }
+  );
 
   return {
     isValidIndexData,
@@ -249,8 +301,8 @@ export const useDocuments = () => {
     getDocumentDescription,
     searchDocumentRecords,
     downloadFileFromUrl,
-    hasMinimumSearchCriteria,
     saveDocuments,
-    debouncedSearch
-  }
-}
+    debouncedSearch,
+    tempSearchResult,
+  };
+};

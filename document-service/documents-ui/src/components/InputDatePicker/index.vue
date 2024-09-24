@@ -55,7 +55,7 @@ const datePlaceholder = computed(() => {
 
 </script>
 <template>
-  <UPopover :popper="{ placement: 'bottom-start' }" v-model="open">
+  <UPopover :popper="{ placement: 'bottom-start' }">
     <UInput
       class="w-full"
       :placeholder="date ? datePlaceholder : 'Filing Date'"
