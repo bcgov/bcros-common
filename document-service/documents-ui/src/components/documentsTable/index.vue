@@ -14,13 +14,14 @@ const {
 const {
   documentList,
   documentRecord,
-  documentSearchResults,
+  // documentSearchResults,
   searchDocumentId,
   searchEntityId,
   searchDocuments,
   searchDocumentType,
   searchDateRange,
   isLoading,
+  pageNumber,
 } = storeToRefs(useBcrosDocuments());
 
 const documentRecordsTableRef = ref(null);
@@ -92,7 +93,7 @@ onBeforeUnmount(() => {
         ref="documentRecordsTableRef"
         class="mt-8"
         :columns="documentRecordColumns"
-        :rows="documentSearchResults || []"
+        :rows="tempSearchResult || []"
         :sort-button="{
           class: 'font-bold text-sm',
           size: '2xs',
