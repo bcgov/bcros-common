@@ -15,11 +15,13 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
     pageNumber: 1,
 
     // Document Meta
+    consumerDocumentId: '',
     consumerIdentifier: '',
     noIdCheckbox: false,
     noDocIdCheckbox: false,
     documentClass: '',
     documentType: '',
+    description: '',
     consumerFilingDate: '',
     documentList: [],
 
@@ -47,6 +49,6 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
 
   return {
     ...toRefs(state),
-    resetStore, // Expose the reset function
+    resetStore
   }
 })
