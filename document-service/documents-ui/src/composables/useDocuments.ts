@@ -136,30 +136,6 @@ export const useDocuments = () => {
     return Array.from(map.values()) as Array<DocumentRequestIF>;
   }
 
-  // For test only
-  function chunkArray(arr, chunkSize: number = 20) {
-    const result = [];
-
-    for (let i = 0; i < arr.length; i += chunkSize) {
-      result.push(arr.slice(i, i + chunkSize));
-    }
-
-    return result;
-  }
-
-  const tempSearchResult = computed(() => {
-    const result = [];
-    if (documentSearchResults.value.length > 0) {
-      const chunkArraies = chunkArray(documentSearchResults.value);
-      for (let i = 0; i <= pageNumber.value; i++) {
-        if (i < chunkArraies.length) {
-          result.push(...chunkArraies[i]);
-        }
-      }
-    }
-    return result;
-  });
-
   /** Validate and Search Documents **/
   const searchDocumentRecords = async (): Promise<void> => {
     try {
@@ -315,6 +291,13 @@ export const useDocuments = () => {
     }
   }
 
+  const getNextDocumentsPage = () => {
+    if(hasMorePages) {
+      pageNumber.value += 1
+      searchDocumentRecords()
+    }
+  } 
+  
   watch(() => searchEntityId.value, (id: string) => {
     // Format Entity Identifier
     searchEntityId.value = id.replace(/\s+/g, '')?.toUpperCase()
