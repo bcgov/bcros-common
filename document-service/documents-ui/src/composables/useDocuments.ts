@@ -132,35 +132,12 @@ export const useDocuments = () => {
     return Array.from(map.values()) as Array<DocumentRequestIF>;
   }
 
-  // For test only
-  function chunkArray(arr, chunkSize: number = 20) {
-    const result = [];
-
-    for (let i = 0; i < arr.length; i += chunkSize) {
-      result.push(arr.slice(i, i + chunkSize));
-    }
-
-    return result;
-  }
-
-  const tempSearchResult = computed(() => {
-    const result = [];
-    if (documentSearchResults.value.length > 0) {
-      const chunkArraies = chunkArray(documentSearchResults.value);
-      for (let i = 0; i <= pageNumber.value; i++) {
-        if (i < chunkArraies.length) {
-          result.push(...chunkArraies[i]);
-        }
-      }
-    }
-    return result;
-  });
-
   /** Validate and Search Documents **/
   const searchDocumentRecords = async (): Promise<void> => {
     try {
       isLoading.value = true;
       const response: ApiResponseIF = (await getDocuments({
+        pageNumber: pageNumber.value,
         consumerDocumentId: searchDocumentId.value,
         consumerIdentifier: searchEntityId.value,
         documentClass: searchDocumentClass.value,
@@ -173,9 +150,10 @@ export const useDocuments = () => {
       isLoading.value = false;
 
       searchResultCount.value = response.data.value.resultCount;
-      documentSearchResults.value = consolidateDocIds(
-        response.data.value.results
-      );
+      documentSearchResults.value = [
+        ...documentSearchResults.value,
+        ...consolidateDocIds(response.data.value.results)
+      ]
     } catch (error) {
       console.error("Request failed:", error);
     }
@@ -211,6 +189,10 @@ export const useDocuments = () => {
     );
   });
 
+  const hasMorePages = computed(() => {
+  
+    return Math.ceil(searchResultCount.value / pageSize) > pageNumber.value
+  })
   const debouncedSearch = debounce(searchDocumentRecords);
 
   /** Validate and Save Document Indexing */
@@ -284,6 +266,12 @@ export const useDocuments = () => {
     }
   };
 
+  const getNextDocumentsPage = () => {
+    if(hasMorePages) {
+      pageNumber.value += 1
+      searchDocumentRecords()
+    }
+  } 
   watch(
     () => searchEntityId.value,
     (id: string) => {
@@ -303,6 +291,6 @@ export const useDocuments = () => {
     downloadFileFromUrl,
     saveDocuments,
     debouncedSearch,
-    tempSearchResult,
+    getNextDocumentsPage
   };
 };

@@ -8,20 +8,19 @@ const {
   downloadFileFromUrl,
   searchDocumentRecords,
   getDocumentTypesByClass,
-  tempSearchResult,
+  getNextDocumentsPage
 } = useDocuments();
 
 const {
   documentList,
   documentRecord,
-  // documentSearchResults,
+  documentSearchResults,
   searchDocumentId,
   searchEntityId,
   searchDocuments,
   searchDocumentType,
   searchDateRange,
   isLoading,
-  pageNumber,
 } = storeToRefs(useBcrosDocuments());
 
 const documentRecordsTableRef = ref(null);
@@ -55,7 +54,7 @@ const handleTableScroll = () => {
     const clientHeight = documentRecordsTableRef.value.$el.clientHeight;
 
     if (scrollTop + clientHeight >= scrollHeight) {
-      pageNumber.value += 1;
+      getNextDocumentsPage()
     }
   }
 };
@@ -93,7 +92,7 @@ onBeforeUnmount(() => {
         ref="documentRecordsTableRef"
         class="mt-8"
         :columns="documentRecordColumns"
-        :rows="tempSearchResult || []"
+        :rows="documentSearchResults || []"
         :sort-button="{
           class: 'font-bold text-sm',
           size: '2xs',

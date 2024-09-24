@@ -12,7 +12,7 @@ export const useBcrosDocuments = defineStore('bcros/documents', () => {
     searchDocumentClass: '',
     searchDocumentType: '',
     searchDateRange: { start: null, end: null },
-    pageNumber: 0,
+    pageNumber: 1,
 
     // Document Meta
     consumerIdentifier: '',
