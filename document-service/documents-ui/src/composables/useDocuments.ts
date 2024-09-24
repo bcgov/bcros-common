@@ -272,13 +272,6 @@ export const useDocuments = () => {
     }
   };
 
-  const getNextDocumentsPage = () => {
-    if(hasMorePages) {
-      pageNumber.value += 1
-      searchDocumentRecords()
-    }
-  } 
-
   /** Scroll to the first error element on the page */
   const scrollToFirstError = () => {
     // Find the first element with the class "placeholder:text-red-500"
