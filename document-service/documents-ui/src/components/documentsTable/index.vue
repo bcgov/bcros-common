@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { formatToReadableDate } from "~/utils/dateHelper";
-import { documentResultColumns } from "~/utils/documentTypes";
-import type { DocumentInfoIF } from "~/interfaces/document-types-interface";
+import { formatToReadableDate } from "~/utils/dateHelper"
+import { documentResultColumns } from "~/utils/documentTypes"
+import type { DocumentInfoIF } from "~/interfaces/document-types-interface"
 const {
   getDocumentDescription,
   downloadFileFromUrl,
   searchDocumentRecords,
   getDocumentTypesByClass,
-  getNextDocumentsPage
-} = useDocuments();
+  getNextDocumentsPage,
+} = useDocuments()
 
 const {
   documentList,
@@ -20,10 +20,10 @@ const {
   searchDocumentType,
   searchDateRange,
   isLoading,
-} = storeToRefs(useBcrosDocuments());
+} = storeToRefs(useBcrosDocuments())
 
-const documentRecordsTableRef = ref(null);
-const documentRecordColumns = ref([]);
+const documentRecordsTableRef = ref(null)
+const documentRecordColumns = ref([])
 
 const isFiltered = computed(() => {
   return (
@@ -32,53 +32,54 @@ const isFiltered = computed(() => {
     !!searchDocuments.value ||
     !!searchDocumentType.value ||
     !!searchDateRange.value
-  );
-});
+  )
+})
 
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
-  documentRecord.value = { ...searchResult };
+  documentRecord.value = { ...searchResult }
   documentList.value = searchResult.consumerFilenames?.map((file) => ({
     name: file,
-  }));
+  }))
   navigateTo({
     name: RouteNameE.DOCUMENT_RECORDS,
     params: { identifier: searchResult.consumerDocumentId },
-  });
-};
+  })
+}
 
 const handleTableScroll = () => {
   if (documentRecordsTableRef.value) {
-    const scrollTop = documentRecordsTableRef.value.$el.scrollTop;
-    const scrollHeight = documentRecordsTableRef.value.$el.scrollHeight;
-    const clientHeight = documentRecordsTableRef.value.$el.clientHeight;
+    const scrollTop = documentRecordsTableRef.value.$el.scrollTop
+    const scrollHeight = documentRecordsTableRef.value.$el.scrollHeight
+    const clientHeight = documentRecordsTableRef.value.$el.clientHeight
     if (scrollTop + clientHeight >= scrollHeight) {
       getNextDocumentsPage()
     }
   }
-};
+}
 
 onMounted(() => {
-  documentRecordColumns.value = documentResultColumns();
-  searchDocumentRecords();
+  documentRecordColumns.value = documentResultColumns()
+  searchDocumentRecords()
 
-  const tableElement = documentRecordsTableRef.value?.$el;
+  const tableElement = documentRecordsTableRef.value?.$el
   if (tableElement) {
-    tableElement.addEventListener("scroll", handleTableScroll);
+    tableElement.addEventListener("scroll", handleTableScroll)
   }
-});
+})
 
 onBeforeUnmount(() => {
-  const tableElement = documentRecordsTableRef.value?.$el;
+  const tableElement = documentRecordsTableRef.value?.$el
   if (tableElement) {
-    tableElement.removeEventListener("scroll", handleTableScroll);
+    tableElement.removeEventListener("scroll", handleTableScroll)
   }
-});
+})
 </script>
 <template>
   <ContentWrapper
     name="document-search-results"
     class="my-12"
     data-cy="document-search-results"
+    :is-table="true"
   >
     <template #header>
       <div class="flex justify-between items-center">
@@ -88,7 +89,6 @@ onBeforeUnmount(() => {
     <template #content>
       <UTable
         ref="documentRecordsTableRef"
-        class="mt-8"
         :columns="documentRecordColumns"
         :rows="documentSearchResults || []"
         :sort-button="{
@@ -104,12 +104,14 @@ onBeforeUnmount(() => {
         }"
       >
         <template #emptyColumn-header="{ column }">
-          <div class="uppercase font-light text-gray-600">
-            <div class="flex align-center px-2">
+          <div
+            class="uppercase font-normal text-sm text-bcGovGray-700 font-sans"
+          >
+            <div class="flex align-center pl-5">
               {{ column.label }}
             </div>
             <UDivider class="my-3 w-full" />
-            <div class="flex align-center px-2 h-8">
+            <div class="flex align-center items-center pl-5 h-11">
               {{ $t("documentSearch.table.headers.filterBy") }}
             </div>
           </div>
@@ -132,31 +134,13 @@ onBeforeUnmount(() => {
             :column="column"
           />
         </template>
-        <template #consumerFilingDateTime-header="{ column }">
-          <div class="px-2">
-            {{ column.label }}
-          </div>
-          <UDivider class="my-3" />
-          <div>
-            <div class="h-8">
-              <InputDatePicker
-                v-model="searchDateRange"
-                class="w-full px-2 font-light"
-                is-ranged-picker
-                is-left-bar
-                is-filter
-                size="md"
-              />
-            </div>
-          </div>
-        </template>
         <template #documentTypeDescription-header="{ column }">
           <div class="px-2">
             {{ column.label }}
           </div>
           <UDivider class="my-3" />
           <div>
-            <div class="h-8">
+            <div class="h-11">
               <USelectMenu
                 v-model="searchDocumentType"
                 :placeholder="column.label"
@@ -166,7 +150,11 @@ onBeforeUnmount(() => {
                 value-attribute="type"
                 option-attribute="description"
                 size="md"
-                :ui="{ icon: { trailing: { pointer: '' } } }"
+                :popper="{ placement: 'bottom-start' }"
+                :ui="{
+                  icon: { trailing: { pointer: '' } },
+                  size: { md: 'h-[44px]' },
+                }"
               >
                 <template #trailing>
                   <UButton
@@ -182,16 +170,40 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </template>
+        <template #consumerFilingDateTime-header="{ column }">
+          <div class="px-2">
+            {{ column.label }}
+          </div>
+          <UDivider class="my-3" />
+          <div>
+            <div class="h-11">
+              <InputDatePicker
+                v-model="searchDateRange"
+                class="w-full px-2 font-light"
+                is-ranged-picker
+                is-left-bar
+                is-filter
+                size="md"
+              />
+            </div>
+          </div>
+        </template>
+        <template #description-header="{ column }">
+          <DocumentsTableInputHeader
+            v-model="searchDocumentId"
+            :column="column"
+          />
+        </template>
         <template #actions-header="{ column }">
           <div class="px-2">
             {{ column.label }}
           </div>
           <UDivider class="my-3" />
           <div>
-            <div class="flex justify-center h-8">
+            <div class="flex justify-center h-11">
               <UButton
                 v-if="isFiltered"
-                class="h-[35px] px-3 py-3 text-sm"
+                class="h-[44px] px-3 py-3 text-sm"
                 :label="$t('documentSearch.table.clearFilter')"
                 icon="i-mdi-cancel-circle"
                 variant="outline"
@@ -256,7 +268,7 @@ onBeforeUnmount(() => {
         <!-- Actions -->
         <template #actions-data="{ row }">
           <UButton
-            class="h-[35px] px-8 text-base"
+            class="relative h-[35px] px-8 text-base"
             outlined
             color="primary"
             @click="openDocumentRecord(row)"
