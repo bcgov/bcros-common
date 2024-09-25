@@ -14,3 +14,5 @@ export function debounce(func, timeout = 200) {
     }, timeout);
   };
 }
+
+export const pageSize = 100

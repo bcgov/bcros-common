@@ -7,6 +7,7 @@ const {
   downloadFileFromUrl,
   searchDocumentRecords,
   getDocumentTypesByClass,
+  getNextDocumentsPage
 } = useDocuments();
 
 const {
@@ -20,6 +21,10 @@ const {
   searchDateRange,
   isLoading,
 } = storeToRefs(useBcrosDocuments());
+
+const documentRecordsTableRef = ref(null);
+const documentRecordColumns = ref([]);
+
 const isFiltered = computed(() => {
   return (
     !!searchDocumentId.value ||
@@ -29,6 +34,7 @@ const isFiltered = computed(() => {
     !!searchDateRange.value
   );
 });
+
 const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   documentRecord.value = { ...searchResult };
   documentList.value = searchResult.consumerFilenames?.map((file) => ({
@@ -40,11 +46,32 @@ const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   });
 };
 
-const documentRecordColumns = ref([]);
+const handleTableScroll = () => {
+  if (documentRecordsTableRef.value) {
+    const scrollTop = documentRecordsTableRef.value.$el.scrollTop;
+    const scrollHeight = documentRecordsTableRef.value.$el.scrollHeight;
+    const clientHeight = documentRecordsTableRef.value.$el.clientHeight;
+    if (scrollTop + clientHeight >= scrollHeight) {
+      getNextDocumentsPage()
+    }
+  }
+};
 
 onMounted(() => {
   documentRecordColumns.value = documentResultColumns();
   searchDocumentRecords();
+
+  const tableElement = documentRecordsTableRef.value?.$el;
+  if (tableElement) {
+    tableElement.addEventListener("scroll", handleTableScroll);
+  }
+});
+
+onBeforeUnmount(() => {
+  const tableElement = documentRecordsTableRef.value?.$el;
+  if (tableElement) {
+    tableElement.removeEventListener("scroll", handleTableScroll);
+  }
 });
 </script>
 <template>
@@ -60,6 +87,7 @@ onMounted(() => {
     </template>
     <template #content>
       <UTable
+        ref="documentRecordsTableRef"
         class="mt-8"
         :columns="documentRecordColumns"
         :rows="documentSearchResults || []"
