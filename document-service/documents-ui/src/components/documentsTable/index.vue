@@ -213,7 +213,16 @@ onBeforeUnmount(() => {
           </div>
         </template>
 
-        <!-- Document URL -->
+        <!-- Entity ID -->
+        <template #consumerIdentifier-data="{ row }">
+          <div>
+            {{ row.consumerIdentifier }}
+          </div>
+          <div class="italic text-xs text-bcGovGray-700">
+            {{ getDocumentTypesByClass(row.documentClass)[0].description }}
+          </div>
+        </template>
+        <!-- Document class -->
         <template #documentClass-data="{ row }">
           {{ getDocumentDescription(row.documentClass) }}
         </template>
