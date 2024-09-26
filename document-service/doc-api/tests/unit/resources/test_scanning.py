@@ -22,7 +22,7 @@ import pytest
 from flask import current_app
 
 from doc_api.models import DocumentScanning
-from doc_api.models import utils as model_utils, ScanningAuthor
+from doc_api.models import utils as model_utils, ScanningAuthor, ScanningParameter, ScanningSchedule
 from doc_api.models.type_tables import DocumentClasses
 from doc_api.services.authz import BC_REGISTRY, COLIN_ROLE, STAFF_ROLE
 from doc_api.utils.logging import logger
@@ -36,6 +36,8 @@ PATH: str = "/api/v1/scanning/{doc_class}/{consumerDocumentId}"
 PATH_CLASSES: str = "/api/v1/scanning/document-classes"
 PATH_TYPES: str = "/api/v1/scanning/document-types"
 PATH_AUTHORS: str = "/api/v1/scanning/authors"
+PATH_SCHEDULES: str = "/api/v1/scanning/schedules"
+PATH_PARAMETERS: str = "/api/v1/scanning/parameters"
 CONTENT_TYPE_JSON = "application/json"
 PAYLOAD_INVALID = {}
 PAYLOAD_VALID = {
@@ -58,6 +60,26 @@ AUTHOR = {
     "jobTitle": "Analyst",
     "email": "bsmith-12@gmail.com",
     "phoneNumber": "250 721-1234",
+}
+SCHEDULE = {
+    "scheduleNumber": 20,
+    "sequenceNumber": 10,
+}
+PARAMETERS = {
+    "useDocumentFeeder": True,
+    "showTwainUi": True,
+    "showTwainProgress": True,
+    "useFullDuplex": True,
+    "useLowResolution": True,
+    "maxPagesInBox": 1000,
+}
+UPDATE_PARAMETERS = {
+    "useDocumentFeeder": False,
+    "showTwainUi": False,
+    "showTwainProgress": False,
+    "useFullDuplex": False,
+    "useLowResolution": False,
+    "maxPagesInBox": 10,
 }
 # testdata pattern is ({description}, {payload}, {roles}, {account}, {doc_class}, {cons_doc_id}, {status})
 TEST_CREATE_DATA = [
@@ -99,6 +121,32 @@ TEST_GET_DATA_TYPES = [
 TEST_GET_DATA_AUTHORS = [
     ("Staff missing account", STAFF_ROLES, None, HTTPStatus.BAD_REQUEST),
     ("Invalid role", INVALID_ROLES, "UT1234", HTTPStatus.UNAUTHORIZED),
+    ("Valid staff", STAFF_ROLES, "UT1234", HTTPStatus.OK),
+]
+# testdata pattern is ({description}, {roles}, {account}, {status})
+TEST_GET_DATA_SCHEDULES = [
+    ("Staff missing account", STAFF_ROLES, None, HTTPStatus.BAD_REQUEST),
+    ("Invalid role", INVALID_ROLES, "UT1234", HTTPStatus.UNAUTHORIZED),
+    ("Valid staff", STAFF_ROLES, "UT1234", HTTPStatus.OK),
+]
+# testdata pattern is ({description}, {roles}, {account}, {status})
+TEST_GET_DATA_PARAMETERS = [
+    ("Staff missing account", STAFF_ROLES, None, HTTPStatus.BAD_REQUEST),
+    ("Invalid role", INVALID_ROLES, "UT1234", HTTPStatus.UNAUTHORIZED),
+    ("Valid staff", STAFF_ROLES, "UT1234", HTTPStatus.OK),
+]
+# testdata pattern is ({description}, {roles}, {account}, {status})
+TEST_CREATE_DATA_PARAMETERS = [
+    ("Staff missing account", STAFF_ROLES, None, HTTPStatus.BAD_REQUEST),
+    ("Invalid role", INVALID_ROLES, "UT1234", HTTPStatus.UNAUTHORIZED),
+    ("Invalid exists", STAFF_ROLES, "UT1234", HTTPStatus.BAD_REQUEST),
+    ("Valid staff", STAFF_ROLES, "UT1234", HTTPStatus.CREATED),
+]
+# testdata pattern is ({description}, {roles}, {account}, {status})
+TEST_PATCH_DATA_PARAMETERS = [
+    ("Staff missing account", STAFF_ROLES, None, HTTPStatus.BAD_REQUEST),
+    ("Invalid role", INVALID_ROLES, "UT1234", HTTPStatus.UNAUTHORIZED),
+    ("Invalid does not exist", STAFF_ROLES, "UT1234", HTTPStatus.BAD_REQUEST),
     ("Valid staff", STAFF_ROLES, "UT1234", HTTPStatus.OK),
 ]
 
@@ -283,3 +331,120 @@ def test_get_authors(session, client, jwt, desc, roles, account, status):
         for author_json in results_json:
             assert author_json.get("firstName")
             assert author_json.get("lastName")
+
+
+@pytest.mark.parametrize("desc,roles,account,status", TEST_GET_DATA_SCHEDULES)
+def test_get_schedules(session, client, jwt, desc, roles, account, status):
+    """Assert that a request to get scanning schedules works as expected."""
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = None
+    if account:
+        headers = create_header_account(jwt, roles, "UT-TEST", account)
+    else:
+        headers = create_header(jwt, roles)
+    # test
+    if status == HTTPStatus.OK:
+        schedule: ScanningSchedule = ScanningSchedule.create_from_json(SCHEDULE)
+        schedule.id = 200000000
+        schedule.save()
+    response = client.get(PATH_SCHEDULES, headers=headers)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.OK:
+        results_json = response.json
+        assert results_json
+        for result_json in results_json:
+            assert result_json.get("sequenceNumber")
+            assert result_json.get("scheduleNumber")
+
+
+@pytest.mark.parametrize("desc,roles,account,status", TEST_GET_DATA_PARAMETERS)
+def test_get_parameters(session, client, jwt, desc, roles, account, status):
+    """Assert that a request to get scanning parameters works as expected."""
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = None
+    if account:
+        headers = create_header_account(jwt, roles, "UT-TEST", account)
+    else:
+        headers = create_header(jwt, roles)
+    # test
+    if status == HTTPStatus.OK:
+        parameters: ScanningParameter = ScanningParameter.create_from_json(PARAMETERS)
+        parameters.id = 200000000
+        parameters.save()
+    response = client.get(PATH_PARAMETERS, headers=headers)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.OK:
+        result_json = response.json
+        assert result_json
+        assert result_json.get("useDocumentFeeder")
+        assert result_json.get("showTwainUi")
+        assert result_json.get("showTwainProgress")
+        assert result_json.get("useFullDuplex")
+        assert result_json.get("useLowResolution")
+        assert result_json.get("maxPagesInBox") > 0
+
+
+@pytest.mark.parametrize("desc,roles,account,status", TEST_CREATE_DATA_PARAMETERS)
+def test_create_parameters(session, client, jwt, desc, roles, account, status):
+    """Assert that a request to create scanning parameters works as expected."""
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = None
+    if account:
+        headers = create_header_account(jwt, roles, "UT-TEST", account)
+    else:
+        headers = create_header(jwt, roles)
+    # test
+    if desc == "Invalid exists":
+        parameters: ScanningParameter = ScanningParameter.create_from_json(PARAMETERS)
+        parameters.id = 200000000
+        parameters.save()
+    response = client.post(PATH_PARAMETERS, json=PARAMETERS, headers=headers, content_type=CONTENT_TYPE_JSON)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.CREATED:
+        result_json = response.json
+        assert result_json
+        assert result_json.get("useDocumentFeeder")
+        assert result_json.get("showTwainUi")
+        assert result_json.get("showTwainProgress")
+        assert result_json.get("useFullDuplex")
+        assert result_json.get("useLowResolution")
+        assert result_json.get("maxPagesInBox") > 0
+
+
+@pytest.mark.parametrize("desc,roles,account,status", TEST_PATCH_DATA_PARAMETERS)
+def test_patch_parameters(session, client, jwt, desc, roles, account, status):
+    """Assert that a request to update scanning parameters works as expected."""
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = None
+    if account:
+        headers = create_header_account(jwt, roles, "UT-TEST", account)
+    else:
+        headers = create_header(jwt, roles)
+    # test
+    if status == HTTPStatus.OK:
+        parameters: ScanningParameter = ScanningParameter.create_from_json(PARAMETERS)
+        parameters.id = 200000000
+        parameters.save()
+    response = client.patch(PATH_PARAMETERS, json=UPDATE_PARAMETERS, headers=headers, content_type=CONTENT_TYPE_JSON)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.OK:
+        result_json = response.json
+        assert result_json
+        assert result_json.get("useDocumentFeeder") == UPDATE_PARAMETERS.get("useDocumentFeeder")
+        assert result_json.get("showTwainUi") == UPDATE_PARAMETERS.get("showTwainUi")
+        assert result_json.get("showTwainProgress") == UPDATE_PARAMETERS.get("showTwainProgress")
+        assert result_json.get("useFullDuplex") == UPDATE_PARAMETERS.get("useFullDuplex")
+        assert result_json.get("useLowResolution") == UPDATE_PARAMETERS.get("useLowResolution")
+        assert result_json.get("maxPagesInBox") == UPDATE_PARAMETERS.get("maxPagesInBox")

@@ -18,7 +18,14 @@ from http import HTTPStatus
 from flask import Blueprint, jsonify, request
 
 from doc_api.exceptions import BusinessException, DatabaseException
-from doc_api.models import DocumentClass, DocumentScanning, DocumentType, ScanningAuthor
+from doc_api.models import (
+    DocumentClass,
+    DocumentScanning,
+    DocumentType,
+    ScanningAuthor,
+    ScanningParameter,
+    ScanningSchedule,
+)
 from doc_api.resources import utils as resource_utils
 from doc_api.services.authz import is_staff
 from doc_api.utils.auth import jwt
@@ -28,6 +35,8 @@ REQUEST_PATH = "/scanning/{doc_class}/{consumer_doc_id}"
 DOC_CLASS_PATH = "/scanning/document-classes"
 DOC_TYPE_PATH = "/scanning/document-types"
 AUTHOR_PATH = "/scanning/authors"
+SCHEDULE_PATH = "/scanning/schedules"
+PARAMETER_PATH = "/scanning/parameters"
 
 bp = Blueprint("SCANNING1", __name__, url_prefix="/scanning")  # pylint: disable=invalid-name
 
@@ -220,6 +229,127 @@ def get_authors():
         return jsonify(response_json), HTTPStatus.OK
     except DatabaseException as db_exception:
         return resource_utils.db_exception_response(db_exception, account_id, "GET scanning authors")
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
+@bp.route("/schedules", methods=["GET", "OPTIONS"])
+@jwt.requires_auth
+def get_schedules():
+    """Retrieve scanning schedules for the scanning application."""
+    try:
+        req_path: str = SCHEDULE_PATH
+        account_id = resource_utils.get_account_id(request)
+        logger.info(f"Starting new get scanning schedules request {req_path}, account={account_id}")
+        if account_id is None:
+            return resource_utils.account_required_response()
+        if not is_staff(jwt):
+            logger.error("User not staff: currently requests are staff only.")
+            return resource_utils.unauthorized_error_response(account_id)
+        results = ScanningSchedule.find_all()
+        if not results:
+            logger.warning("No scanning schedules found.")
+            return resource_utils.not_found_error_response("GET scanning schedules", account_id)
+        response_json = []
+        for result in results:
+            response_json.append(result.json)
+        logger.info(f"get_schedules returning array of length {len(response_json)}")
+        return jsonify(response_json), HTTPStatus.OK
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(db_exception, account_id, "GET scanning schedules")
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
+@bp.route("/parameters", methods=["GET", "OPTIONS"])
+@jwt.requires_auth
+def get_parameters():
+    """Retrieve scanning parameters for the scanning application."""
+    try:
+        req_path: str = PARAMETER_PATH
+        account_id = resource_utils.get_account_id(request)
+        logger.info(f"Starting new get scanning parameters request {req_path}, account={account_id}")
+        if account_id is None:
+            return resource_utils.account_required_response()
+        if not is_staff(jwt):
+            logger.error("User not staff: currently requests are staff only.")
+            return resource_utils.unauthorized_error_response(account_id)
+        results = ScanningParameter.find()
+        if not results:
+            logger.warning("No scanning parameters found.")
+            return resource_utils.not_found_error_response("GET scanning parameters", account_id)
+        logger.info("get_parameters found values to return")
+        return jsonify(results.json), HTTPStatus.OK
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(db_exception, account_id, "GET scanning parameters")
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
+@bp.route("/parameters", methods=["POST", "OPTIONS"])
+@jwt.requires_auth
+def post_parameters():
+    """Create scanning parameters for the scanning application: only one record allowed."""
+    try:
+        req_path: str = PARAMETER_PATH
+        account_id = resource_utils.get_account_id(request)
+        logger.info(f"Starting new create scanning parameters request {req_path}, account={account_id}")
+        if account_id is None:
+            return resource_utils.account_required_response()
+        if not is_staff(jwt):
+            logger.error("User not staff: currently requests are staff only.")
+            return resource_utils.unauthorized_error_response(account_id)
+        request_json = request.get_json(silent=True)
+        if not request_json:
+            return resource_utils.bad_request_response("POST invalid: no scanning parameters in payload.")
+        results = ScanningParameter.find()
+        if results:
+            logger.warning("Existing scanning parameters found.")
+            return resource_utils.bad_request_response("Existing scanning parameters found: use PATCH instead.")
+        params: ScanningParameter = ScanningParameter.create_from_json(request_json)
+        params.save()
+        logger.info(f"post_parameters created parameters: {params.json}")
+        return jsonify(params.json), HTTPStatus.CREATED
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(db_exception, account_id, "POST scanning parameters")
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
+@bp.route("/parameters", methods=["PATCH", "OPTIONS"])
+@jwt.requires_auth
+def patch_parameters():
+    """Update scanning parameters for the scanning application: only one record allowed."""
+    try:
+        req_path: str = PARAMETER_PATH
+        account_id = resource_utils.get_account_id(request)
+        logger.info(f"Starting new update scanning parameters request {req_path}, account={account_id}")
+        if account_id is None:
+            return resource_utils.account_required_response()
+        if not is_staff(jwt):
+            logger.error("User not staff: currently requests are staff only.")
+            return resource_utils.unauthorized_error_response(account_id)
+        request_json = request.get_json(silent=True)
+        if not request_json:
+            return resource_utils.bad_request_response("PATCH invalid: no scanning parameters in payload.")
+        params = ScanningParameter.find()
+        if not params:
+            logger.warning("No existing scanning parameters found.")
+            return resource_utils.bad_request_response("No existing scanning parameters found to update.")
+        params.update(request_json)
+        params.save()
+        logger.info(f"patch_parameters updated parameters: {params.json}")
+        return jsonify(params.json), HTTPStatus.OK
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(db_exception, account_id, "PATCH scanning parameters")
     except BusinessException as exception:
         return resource_utils.business_exception_response(exception)
     except Exception as default_exception:  # noqa: B902; return nicer default error
