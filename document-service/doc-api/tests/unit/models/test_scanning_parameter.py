@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests to assure the scanning_schedule Model.
+"""Tests to assure the scanning_parameter Model.
 
-Test-Suite to ensure that the scanning_schedule Model is working as expected.
+Test-Suite to ensure that the scanning_parameter Model is working as expected.
 """
 import copy
 
