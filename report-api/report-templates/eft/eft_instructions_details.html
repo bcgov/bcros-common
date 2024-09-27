@@ -50,7 +50,17 @@
   <p>Please ensure that you <span class="font-bold">pay the exact amount stated on your monthly statement</span>. Over or underpayments may lead to service interruptions and processing delays.</p>
   <p><span class="font-bold">For every payment</span>, please send an email with the following details after your payment to ensure the proper processing of payment and to prevent any delays.</p>
   <p><span class="font-bold">Email address</span>: <a href="mailto:BCROSRev@gov.bc.ca">BCROSRev@gov.bc.ca</a></p>
-  <p class="no-margin"><span class="font-bold">Subject Line</span>: EFT/Wire transfer Payment - Your BC Registries and Online Services Account Name - Account Number</p>
+  <p class="no-margin"><span class="font-bold">Subject Line</span>: 
+    {% if statement.payment_methods %}
+      {% if statement.payment_methods[0] == 'EFT' %}
+      EFT 
+      {% else %}
+      Wire transfer 
+      {% endif %}
+    {% else %}
+      EFT/Wire transfer 
+    {% endif %}
+    Payment - Your BC Registries and Online Services Account Name - Account Number</p>
   <p>Include the following details in your email:</p>
   <ul>
     <li>BC Registries and Online Services account name (and branch name if applicable)</li>
