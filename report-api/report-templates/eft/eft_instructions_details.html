@@ -51,7 +51,7 @@
   <p><span class="font-bold">For every payment</span>, please send an email with the following details after your payment to ensure the proper processing of payment and to prevent any delays.</p>
   <p><span class="font-bold">Email address</span>: <a href="mailto:BCROSRev@gov.bc.ca">BCROSRev@gov.bc.ca</a></p>
   <p class="no-margin"><span class="font-bold">Subject Line</span>: 
-    {% if statement.payment_methods %}
+    {% if statement and statement.payment_methods %}
       {% if statement.payment_methods[0] == 'EFT' %}
       EFT 
       {% else %}
