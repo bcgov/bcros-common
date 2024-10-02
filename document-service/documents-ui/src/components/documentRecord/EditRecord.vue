@@ -220,8 +220,8 @@ documentRecord.documentClass
                     {{ $t('documentIndexing.form.dateSelect.label') }}
                     <HasChangesBadge
                       class="ml-1"
-                      :baseline="formatDateToISO(documentRecordSnapshot.consumerFilingDateTime)"
-                      :current-state="formatDateToISO(documentRecord.consumerFilingDateTime)"
+                      :baseline="formatDateToISO(documentRecordSnapshot?.consumerFilingDateTime)"
+                      :current-state="formatDateToISO(documentRecord?.consumerFilingDateTime)"
                     />
                   </span>
                 </template>

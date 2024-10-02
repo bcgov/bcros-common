@@ -185,7 +185,6 @@ export const useDocuments = () => {
       console.error("Request failed:", error);
     }
   }
-  const debouncedSearch = debounce(searchDocumentRecords)
 
   /**
    * Downloads a file from the given URL.
