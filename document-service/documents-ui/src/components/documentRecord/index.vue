@@ -51,7 +51,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.entityId') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentRecordSnapshot.consumerIdentifier"
             :current-state="documentRecord.consumerIdentifier"
           />
@@ -62,7 +62,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.documentCategory') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentRecordSnapshot.documentClass"
             :current-state="documentRecord.documentClass"
           />
@@ -73,7 +73,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.documentType') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentRecordSnapshot.documentType"
             :current-state="documentRecord.documentType"
           />
@@ -84,7 +84,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.description') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentRecordSnapshot.description"
             :current-state="documentRecord.description"
           />
@@ -95,7 +95,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.filingDate') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentRecordSnapshot.consumerFilingDateTime"
             :current-state="documentRecord.consumerFilingDateTime"
           />
@@ -113,7 +113,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.scanningLabel') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="scanningDetailsSnapshot"
             :current-state="scanningDetails"
           />
@@ -141,7 +141,7 @@ const { fetchUrlAndDownload, getDocumentDescription } = useDocuments()
           {{ $t('documentReview.labels.documentListLabel') }}
           <HasChangesBadge
             v-if="isReviewMode"
-            class="max-w-[21.5%]"
+            class="w-[65px]"
             :baseline="documentListSnapshot"
             :current-state="documentList"
           />

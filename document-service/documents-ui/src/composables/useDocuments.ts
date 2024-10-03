@@ -335,7 +335,7 @@ export const useDocuments = () => {
               documentType: documentRecord.value.documentType,
               description: documentRecord.value.description,
               consumerFilingDate: formatDateToISO(documentRecord.value.consumerFilingDateTime),
-            });
+            })
           }
 
           // Update Document Files
@@ -345,7 +345,7 @@ export const useDocuments = () => {
                 consumerFilename: document.name,
               },
               document
-            );
+            )
           }
 
           // Update or Create Scanning Details
@@ -355,14 +355,14 @@ export const useDocuments = () => {
               consumerDocumentId: documentRecord.value.consumerDocumentId,
               documentClass: documentRecord.value.documentClass,
               scanningDetails: scanningDetails.value,
-            });
+            })
 
             if (scanningData.statusCode === 404) {
               await createScanningRecord({
                 consumerDocumentId: documentRecord.value.consumerDocumentId,
                 documentClass: documentRecord.value.documentClass,
                 scanningDetails: scanningDetails.value,
-              });
+              })
             }
           }
         }

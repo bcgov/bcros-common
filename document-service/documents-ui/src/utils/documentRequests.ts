@@ -274,13 +274,12 @@ export async function updateScanningRecord(params: DocumentRequestIF)
   const url = `${baseURL}/scanning/${documentClass}/${consumerDocumentId}`
 
   try {
-    await useBcrosFetch<ApiResponseIF>(url, options).then((response) => {
-      return {
-        data: response.data,
-        status: response.status,
-        statusCode: response.error?.value.statusCode
-      }
-    })
+    const response = await useBcrosFetch<ApiResponseIF>(url, options)
+    return {
+      data: response.data,
+      status: response.status,
+      statusCode: response.error?.value.statusCode
+    }
   } catch (error) {
     const axiosError = error as AxiosError
     return {
