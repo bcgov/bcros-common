@@ -450,7 +450,6 @@ export const useDocuments = () => {
     hasMinimumSearchCriteria,
     saveDocuments,
     updateDocuments,
-    debouncedSearch,
     scrollToFirstError,
     getNextDocumentsPage,
     retrieveDocumentRecord,
