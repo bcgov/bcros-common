@@ -280,6 +280,7 @@ def upgrade():
             {"document_type": "COOP_RULES", "document_class": "COOP", "document_type_desc": "Cooperative Rules", "product": "business", "doc_id_required": False, "active": False, "application_id": "COOP"},
             {"document_type": "COOP_MEMORANDUM", "document_class": "COOP", "document_type_desc": "Cooperative Memorandum", "product": "business", "doc_id_required": False, "active": False, "application_id": "COOP"},
             {"document_type": "CORP_AFFIDAVIT", "document_class": "CORP", "document_type_desc": "Affidavit", "product": "business", "doc_id_required": False, "active": False, "application_id": "SCAN"},
+            {"document_type": "DIRECTOR_AFFIDAVIT", "document_class": "CORP", "document_type_desc": "Director Affidavit", "product": "business", "doc_id_required": False, "active": False, "application_id": "SCAN"},
             {"document_type": "PART", "document_class": "FIRM", "document_type_desc": "Partnerships", "product": "business", "doc_id_required": False, "active": True, "application_id": "SCAN"},
             {"document_type": "BCLC", "document_class": "MHR", "document_type_desc": "BCAA LOC. Change", "product": "mhr", "doc_id_required": False, "active": True, "application_id": "MHR"},
         ],
