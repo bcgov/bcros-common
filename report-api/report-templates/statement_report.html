@@ -385,7 +385,7 @@
   </style>
 </head>
 <body>
-  {% set payment_methods = ["EFT", "PAD", "CC", "DRAWDOWN", "INTERNAL", "DIRECT_PAY", "WIRE", "ONLINE_BANKING", "EJV", "CASH", "CHEQUE"] %}
+  {% set payment_methods = ["EFT", "PAD", "CC", "DRAWDOWN", "INTERNAL", "DIRECT_PAY", "ONLINE_BANKING", "EJV", "CASH", "CHEQUE"] %}
   {% set payment_method_index = namespace(value=-1) %}
   {% for payment_method in payment_methods %}
     {% if payment_method in invoices|map(attribute='payment_method')|list %}

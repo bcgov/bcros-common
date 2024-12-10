@@ -16,9 +16,19 @@
                 {% if is_payment_instructions %}
                     ELECTRONIC FUNDS TRANSFER INSTRUCTIONS
                 {% elif payment_method == 'EFT' %}
-                    ACCOUNT STATEMENT - {{ payment_method }}
+                    ACCOUNT STATEMENT - ELECTRONIC FUNDS TRANSFER
                 {% elif payment_method == 'PAD' %}
                     ACCOUNT STATEMENT - PRE-AUTHORIZED DEBIT
+                {% elif payment_method == 'ONLINE_BANKING' %}
+                    ACCOUNT STATEMENT - ONLINE BANKING
+                {% elif payment_method == 'CC' %}
+                    ACCOUNT STATEMENT - CREDIT CARD
+                {% elif payment_method == 'EJV' %}
+                    ACCOUNT STATEMENT - ELECTRONIC JOURNAL VOUCHER
+                {% elif payment_method == 'DRAWDOWN' %}
+                    ACCOUNT STATEMENT - BC ONLINE
+                {% elif payment_method == 'INTERNAL' %}
+                    ACCOUNT STATEMENT - ROUTING SLIP
                 {% else %}
                     ACCOUNT STATEMENT
                 {% endif %}
