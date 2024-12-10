@@ -27,6 +27,10 @@
                     ACCOUNT STATEMENT - ELECTRONIC JOURNAL VOUCHER
                 {% elif payment_method == 'DRAWDOWN' %}
                     ACCOUNT STATEMENT - BC ONLINE
+                {% elif payment_method == 'DIRECT_PAY' %}
+                    ACCOUNT STATEMENT - DIRECT PAY
+                {% elif payment_method == 'INTERNAL' and is_staff_payment %}
+                    ACCOUNT STATEMENT - STAFF PAYMENT
                 {% elif payment_method == 'INTERNAL' %}
                     ACCOUNT STATEMENT - ROUTING SLIP
                 {% else %}
