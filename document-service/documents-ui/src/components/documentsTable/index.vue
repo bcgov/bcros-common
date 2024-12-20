@@ -3,6 +3,8 @@ import { formatToReadableDate } from "~/utils/dateHelper"
 import { documentResultColumns } from "~/utils/documentTypes"
 import { truncate } from "~/utils/documentRecords"
 import type { DocumentInfoIF } from "~/interfaces/document-types-interface"
+import { throttle } from 'lodash'
+
 const {
   getDocumentDescription,
   getDocumentTypesByClass,
@@ -53,16 +55,22 @@ const openDocumentRecord = (searchResult: DocumentInfoIF) => {
   })
 }
 
-const handleTableScroll = async () => {
+/**
+ * Handles table scroll event to load the next page of documents
+ * when the user scrolls to the bottom of the table.
+ * Throttled to prevent excessive calls.
+ */
+const handleTableScroll = throttle(async () => {
   if (documentRecordsTableRef.value) {
     const scrollTop = documentRecordsTableRef.value.$el.scrollTop
     const scrollHeight = documentRecordsTableRef.value.$el.scrollHeight
     const clientHeight = documentRecordsTableRef.value.$el.clientHeight
-    if (scrollTop + clientHeight >= scrollHeight) {
+    if (scrollTop + clientHeight >= scrollHeight - 10) { // Adjust for zoom levels
       await getNextDocumentsPage()
     }
   }
-}
+}, 1000)
+
 const toggleDescription = (consumerDocumentId) => {
   isDescriptionExpanded.value[consumerDocumentId] =
     !isDescriptionExpanded.value[consumerDocumentId]
