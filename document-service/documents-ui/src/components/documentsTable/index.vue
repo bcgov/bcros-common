@@ -311,7 +311,8 @@ watch(() => searchDocumentClass.value, (newValue: string) => {
               class="block my-2"
             >
               <DocumentsTableDownloadLink
-                :download-url="row.consumerFilenames[i]"
+                :doc-class="row.documentClass"
+                :doc-service-id="row.documentServiceId"
                 :file-name="file"
               />
             </span>
@@ -325,7 +326,8 @@ watch(() => searchDocumentClass.value, (newValue: string) => {
           <div v-else-if="row.consumerFilenames.length === 1">
             <span class="block my-2">
               <DocumentsTableDownloadLink
-                :download-url="row.consumerFilenames[0]"
+                :doc-class="row.documentClass"
+                :doc-service-id="row.documentServiceId"
                 :file-name="row.consumerFilenames[0]"
               />
             </span>

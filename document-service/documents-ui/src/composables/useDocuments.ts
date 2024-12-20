@@ -29,7 +29,6 @@ export const useDocuments = () => {
     validateIndex,
     isLoading,
     documentInfoRO,
-    displayDocumentReview,
     searchDocumentClass
   } = storeToRefs(useBcrosDocuments())
 
@@ -146,6 +145,9 @@ export const useDocuments = () => {
    * @param {string} docServiceId - The document service ID of the document to download.
    */
   const fetchUrlAndDownload = async (documentClass: string, docServiceId: string): Promise<void> => {
+    console.log('Fetching document URL...')
+    console.log('Document Class:', documentClass)
+    console.log('Document Service ID:', docServiceId)
     const { data } = await getDocumentUrl(documentClass, docServiceId)
     const link = document.createElement('a')
     link.href = data.value[0].documentURL
@@ -181,6 +183,7 @@ export const useDocuments = () => {
   const saveDocuments = async (): Promise<void> => {
     // Validate Document Indexing
     validateIndex.value = true
+
     if (isValidIndexData.value) {
       isLoading.value = true
 
@@ -193,7 +196,7 @@ export const useDocuments = () => {
 
       try {
         // Iterate over the document list and handle requests sequentially
-        for (const document of documentList.value) {
+        for (const document of uploadedDocumentList.value) {
           const response: ApiResponseOrError = await postDocument(
             {
               consumerDocumentId: consumerDocumentId.value,
@@ -234,7 +237,6 @@ export const useDocuments = () => {
 
         // Display the document review
         isLoading.value = false
-        displayDocumentReview.value = true
       } catch (error) {
         console.error('Request failed:', error)
         isLoading.value = false
