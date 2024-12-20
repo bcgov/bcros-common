@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { truncate , documentPreview } from "~/utils/documentRecords"
+import { truncate } from "~/utils/documentRecords"
 const {
   fetchUrlAndDownload,
 } = useDocuments()

@@ -145,9 +145,6 @@ export const useDocuments = () => {
    * @param {string} docServiceId - The document service ID of the document to download.
    */
   const fetchUrlAndDownload = async (documentClass: string, docServiceId: string): Promise<void> => {
-    console.log('Fetching document URL...')
-    console.log('Document Class:', documentClass)
-    console.log('Document Service ID:', docServiceId)
     const { data } = await getDocumentUrl(documentClass, docServiceId)
     const link = document.createElement('a')
     link.href = data.value[0].documentURL
