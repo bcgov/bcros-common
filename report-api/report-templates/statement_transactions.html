@@ -35,6 +35,7 @@
                     {% set totals.due = totals.due - invoice.refund %}
                 {% endif %}
             {% endif %}
+            
             {% if payment_method == 'EFT' %}
                 {% if invoice.payment_date | format_datetime('unix') <= statement.to_date | format_datetime('unix') %}
                     {% set totals.due = totals.due - invoice.paid %}
