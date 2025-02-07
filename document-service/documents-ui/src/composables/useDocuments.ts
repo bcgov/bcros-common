@@ -87,8 +87,8 @@ export const useDocuments = () => {
    * @returns The description of the class if found, otherwise an empty string.
    */
   function getClassDescription(className: string): string {
-    const documentClass = documentTypes.find(docType => docType.class === className);
-    return documentClass ? documentClass.description : '';
+    const documentClass = documentTypes.find(docType => docType.class === className)
+    return documentClass ? documentClass.description : ''
   }
 
   /**
