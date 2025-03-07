@@ -121,7 +121,6 @@ def upgrade():
             {"document_type": "CAUE", "document_class": "MHR", "active": True},
             {"document_type": "CLW", "document_class": "MHR", "active": False},
             {"document_type": "COMP", "document_class": "MHR", "active": False},
-            {"document_type": "CORR", "document_class": "MHR", "active": True},
             {"document_type": "CONT", "document_class": "MHR", "active": True},
             {"document_type": "CORR", "document_class": "MHR", "active": True},
             {"document_type": "COU", "document_class": "MHR", "active": False},
