@@ -56,11 +56,11 @@
         }
 
         .transaction-counts-head {
-            width: 120px!important;
+            width: 25%!important;
         }
 
         .total-amount-head {
-            width: 88px !important;
+            width: 25% !important;
         }
 
         .text-align-right {
@@ -672,9 +672,8 @@
                         <tr>
                             <th class="registry-head">Registry</th>
                             <th class="transaction-counts-head text-align-right">Transaction Counts</th>
-                            <th class="total-amount-head text-align-right">Total Amount</th>
-                            <th class="transaction-counts-head text-align-right">Disbursement Counts</th>
-                            <th class="total-amount-head text-align-right">Total Amount</th>
+                            <th class="total-amount-head text-align-right">Transaction Amount</th>
+                            <th class="total-amount-head text-align-right">Disbursement Amount</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -683,7 +682,6 @@
                             <td>{{ row.registry }}</td>
                             <td class="text-align-right">{{ row.transactionCounts }}</td>
                             <td class="text-align-right">{{ row.totalPayment }}</td>
-                            <td class="text-align-right">{{ row.disbursementCounts }}</td>
                             <td class="text-align-right">{{ row.totalDisbursement }}</td>
                         </tr>
                         {% endfor %}
