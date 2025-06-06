@@ -322,6 +322,8 @@ def test_get_product_entity_id(session, client, jwt, desc, entity_id, event_id, 
 def test_create(session, client, jwt, desc, entity_id, event_id, report_type, status):
     """Assert that a post save new report works as expected."""
     # setup
+    if is_ci_testing() or not current_app.config.get("SUBSCRIPTION_API_KEY"):
+        return
     current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
     headers = None
     headers = create_header_account_upload(jwt, USER_ROLES, "UT-TEST", "PS12345", MEDIA_PDF)
@@ -353,6 +355,8 @@ def test_create(session, client, jwt, desc, entity_id, event_id, report_type, st
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status,payload", TEST_PATCH_DATA)
 def test_update(session, client, jwt, desc, entity_id, event_id, report_type, status, payload):
     """Assert that a request to update report information (not the report itself) works as expected."""
+    if is_ci_testing() or not current_app.config.get("SUBSCRIPTION_API_KEY"):
+        return
     # setup
     current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
     headers = None
@@ -385,6 +389,8 @@ def test_update(session, client, jwt, desc, entity_id, event_id, report_type, st
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status", TEST_GET_ID_DATA)
 def test_get_by_id(session, client, jwt, desc, entity_id, event_id, report_type, status):
     """Assert that a request to get report information (not the report itself) by DRS ID works as expected."""
+    if is_ci_testing() or not current_app.config.get("SUBSCRIPTION_API_KEY"):
+        return
     # setup
     current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
     headers = None
@@ -419,6 +425,8 @@ def test_get_by_id(session, client, jwt, desc, entity_id, event_id, report_type,
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status", TEST_GET_EVENT_DATA)
 def test_get_event_id(session, client, jwt, desc, entity_id, event_id, report_type, status):
     """Assert that a request to get report information (not the report itself) by an event ID works as expected."""
+    if is_ci_testing() or not current_app.config.get("SUBSCRIPTION_API_KEY"):
+        return
     # setup
     current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
     headers = None
@@ -449,6 +457,8 @@ def test_get_event_id(session, client, jwt, desc, entity_id, event_id, report_ty
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status", TEST_GET_HISTORY_DATA)
 def test_get_entity_id(session, client, jwt, desc, entity_id, event_id, report_type, status):
     """Assert that a request to get report information (not the report itself) by an entity ID works as expected."""
+    if is_ci_testing():
+        return
     # setup
     current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
     headers = None
@@ -474,3 +484,8 @@ def test_get_entity_id(session, client, jwt, desc, entity_id, event_id, report_t
     assert response.status_code == status
     if status == HTTPStatus.OK:
         assert response.json
+
+
+def is_ci_testing() -> bool:
+    """Check unit test environment: exclude pub/sub for CI testing."""
+    return  current_app.config.get("DEPLOYMENT_ENV", "testing") == "testing"
