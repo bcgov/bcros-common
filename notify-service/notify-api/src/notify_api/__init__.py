@@ -28,7 +28,8 @@ from notify_api.config import config
 from notify_api.exceptions import ExceptionHandler
 from notify_api.metadata import APP_RUNNING_ENVIRONMENT
 from notify_api.models import db
-from notify_api.resources import meta_endpoint, ops_endpoint, v1_endpoint, v2_endpoint
+from notify_api.resources import (meta_endpoint, ops_endpoint, v1_endpoint,
+                                  v2_endpoint)
 from notify_api.services.gcp_queue import queue
 from notify_api.utils.auth import jwt
 
@@ -43,6 +44,7 @@ class DBConfig:
     database: str
     user: str
     ip_type: str
+    schema: str
 
 
 def getconn(db_config: DBConfig) -> object:
@@ -63,7 +65,15 @@ def getconn(db_config: DBConfig) -> object:
             ip_type=db_config.ip_type,
             driver="pg8000",
             enable_iam_auth=True,
+            options=f"-c search_path={db_config.schema if db_config.schema != 'public' else 'public'}"
         )
+
+        # # Set schema if specified (with proper SQL escaping)
+        # if db_config.schema and db_config.schema != 'public':
+        #     with conn.cursor() as cursor:
+        #         stmt = "SET search_path TO %s"
+        #         cursor.execute(stmt, (db_config.schema,))
+
         return conn
 
 
@@ -81,6 +91,7 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
             database=app.config["DB_NAME"],
             user=app.config["DB_USER"],
             ip_type="private",
+            schema=app.config.get("DB_SCHEMA", "public"),
         )
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"creator": lambda: getconn(db_config)}
 

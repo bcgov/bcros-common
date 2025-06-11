@@ -31,6 +31,7 @@ def healthz():
     """Determine if the service and required dependencies are still working."""
     try:
         db.session.execute(SQL)
+        # TODO add a test query here
     except exc.SQLAlchemyError as db_exception:
         logger.error("DB connection pool unhealthy:" + repr(db_exception))
         return {"message": "api is down"}, 500
