@@ -28,8 +28,7 @@ from notify_api.config import config
 from notify_api.exceptions import ExceptionHandler
 from notify_api.metadata import APP_RUNNING_ENVIRONMENT
 from notify_api.models import db
-from notify_api.resources import (meta_endpoint, ops_endpoint, v1_endpoint,
-                                  v2_endpoint)
+from notify_api.resources import meta_endpoint, ops_endpoint, v1_endpoint, v2_endpoint
 from notify_api.services.gcp_queue import queue
 from notify_api.utils.auth import jwt
 
@@ -67,12 +66,6 @@ def getconn(db_config: DBConfig) -> object:
             enable_iam_auth=True,
             options=f"-c search_path={db_config.schema if db_config.schema != 'public' else 'public'}"
         )
-
-        # # Set schema if specified (with proper SQL escaping)
-        # if db_config.schema and db_config.schema != 'public':
-        #     with conn.cursor() as cursor:
-        #         stmt = "SET search_path TO %s"
-        #         cursor.execute(stmt, (db_config.schema,))
 
         return conn
 
