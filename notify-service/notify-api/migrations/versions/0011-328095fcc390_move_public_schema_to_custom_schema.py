@@ -71,7 +71,7 @@ def topological_sort(graph, nodes):
     return result
 
 def copy_data_with_dependencies(conn, target_schema):
-    """Copy data respecting foreign key constraints."""
+    """Copy data respecting foreign key constraints with row count verification."""
     # Get dependency graph for public schema
     graph, all_tables = get_table_dependencies(conn, 'public')
 
@@ -79,8 +79,11 @@ def copy_data_with_dependencies(conn, target_schema):
     copy_order = topological_sort(graph, all_tables)
     logger.info(f"Determined copy order: {copy_order}")
 
-    for table_name in copy_order:
-        try:
+    # Dictionary to track row counts
+    row_counts = {}
+
+    try:
+        for table_name in copy_order:
             # Check if table exists in target schema
             exists_in_target = conn.execute(text(f"""
                 SELECT 1 FROM information_schema.tables
@@ -90,6 +93,30 @@ def copy_data_with_dependencies(conn, target_schema):
 
             if not exists_in_target:
                 logger.info(f"Skipping {table_name} - not in target schema")
+                continue
+
+            # Get source row count
+            source_count = conn.execute(
+                text(f"SELECT COUNT(*) FROM public.{table_name}")
+            ).scalar()
+            row_counts[table_name] = {'source': source_count}
+
+            # Skip if target has data (but verify counts match)
+            target_has_data = conn.execute(
+                text(f"SELECT EXISTS (SELECT 1 FROM {target_schema}.{table_name} LIMIT 1)")
+            ).scalar()
+
+            if target_has_data:
+                target_count = conn.execute(
+                    text(f"SELECT COUNT(*) FROM {target_schema}.{table_name}")
+                ).scalar()
+                if source_count != target_count:
+                    logger.warning(
+                        f"Skipping {table_name} - target has data but counts don't match "
+                        f"(public: {source_count}, {target_schema}: {target_count})"
+                    )
+                    continue  # Skip this table instead of failing
+                logger.info(f"Skipping {table_name} - target already has matching data")
                 continue
 
             # Get all columns with proper quoting
@@ -105,15 +132,6 @@ def copy_data_with_dependencies(conn, target_schema):
                 logger.warning(f"No columns found for {target_schema}.{table_name}")
                 continue
 
-            # Skip if target has data
-            target_has_data = conn.execute(
-                text(f"SELECT EXISTS (SELECT 1 FROM {target_schema}.{table_name} LIMIT 1)")
-            ).scalar()
-
-            if target_has_data:
-                logger.info(f"Skipping {table_name} - target already has data")
-                continue
-
             # Build properly quoted column list
             quoted_columns = [f'"{col[0]}"' for col in columns]
             columns_str = ", ".join(quoted_columns)
@@ -125,10 +143,26 @@ def copy_data_with_dependencies(conn, target_schema):
                 SELECT {columns_str} FROM public.{table_name}
             """))
 
-        except Exception as e:
-            logger.error(f"Error copying {table_name}: {str(e)}")
-            # Continue with next table rather than failing entire migration
-            continue
+            # Verify target row count
+            target_count = conn.execute(
+                text(f"SELECT COUNT(*) FROM {target_schema}.{table_name}")
+            ).scalar()
+            row_counts[table_name]['target'] = target_count
+
+            if source_count != target_count:
+                raise ValueError(
+                    f"Row count mismatch after copy for {table_name} "
+                    f"(public: {source_count}, {target_schema}: {target_count})"
+                )
+
+        logger.info("All tables copied successfully with matching row counts")
+        logger.debug(f"Row count verification: {row_counts}")
+
+    except Exception as e:
+        logger.error(f"Migration aborted due to error: {str(e)}")
+        conn.execute(text("ROLLBACK"))
+        raise  # Re-raise to ensure Alembic marks the migration as failed
+
 
 def get_target_schema():
     """Minimal schema name fetch with validation."""
