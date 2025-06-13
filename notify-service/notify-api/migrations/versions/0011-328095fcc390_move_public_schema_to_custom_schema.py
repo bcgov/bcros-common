@@ -9,6 +9,7 @@ import importlib.util
 import logging
 import os
 import re
+from collections import defaultdict
 from pathlib import Path
 
 from alembic import op
@@ -21,6 +22,113 @@ branch_labels = None
 depends_on = None
 
 logger = logging.getLogger(__name__)
+
+def get_table_dependencies(conn, schema='public'):
+    """Build a dependency graph of tables based on foreign keys."""
+    # Get all tables in schema
+    tables = conn.execute(text(f"""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = '{schema}'
+        AND table_type = 'BASE TABLE'
+    """)).fetchall()
+
+    # Build dependency graph
+    graph = defaultdict(set)
+    tables_with_fks = conn.execute(text(f"""
+        SELECT tc.table_name, ccu.table_name as referenced_table
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name
+          AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu
+          ON ccu.constraint_name = tc.constraint_name
+          AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = '{schema}'
+    """)).fetchall()
+
+    for table, referenced_table in tables_with_fks:
+        graph[table].add(referenced_table)
+
+    return graph, [t[0] for t in tables]
+
+def topological_sort(graph, nodes):
+    """Topologically sort tables based on foreign key dependencies."""
+    visited = set()
+    result = []
+
+    def visit(node):
+        if node not in visited:
+            visited.add(node)
+            for neighbor in graph.get(node, []):
+                visit(neighbor)
+            result.append(node)
+
+    for node in nodes:
+        visit(node)
+
+    return result
+
+def copy_data_with_dependencies(conn, target_schema):
+    """Copy data respecting foreign key constraints."""
+    # Get dependency graph for public schema
+    graph, all_tables = get_table_dependencies(conn, 'public')
+
+    # Get topological order for copying
+    copy_order = topological_sort(graph, all_tables)
+    logger.info(f"Determined copy order: {copy_order}")
+
+    for table_name in copy_order:
+        try:
+            # Check if table exists in target schema
+            exists_in_target = conn.execute(text(f"""
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = '{target_schema}'
+                AND table_name = '{table_name}'
+            """)).scalar()
+
+            if not exists_in_target:
+                logger.info(f"Skipping {table_name} - not in target schema")
+                continue
+
+            # Get all columns with proper quoting
+            columns = conn.execute(text(f"""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = '{target_schema}'
+                AND table_name = '{table_name}'
+                ORDER BY ordinal_position
+            """)).fetchall()
+
+            if not columns:
+                logger.warning(f"No columns found for {target_schema}.{table_name}")
+                continue
+
+            # Skip if target has data
+            target_has_data = conn.execute(
+                text(f"SELECT EXISTS (SELECT 1 FROM {target_schema}.{table_name} LIMIT 1)")
+            ).scalar()
+
+            if target_has_data:
+                logger.info(f"Skipping {table_name} - target already has data")
+                continue
+
+            # Build properly quoted column list
+            quoted_columns = [f'"{col[0]}"' for col in columns]
+            columns_str = ", ".join(quoted_columns)
+
+            # Copy data
+            logger.info(f"Copying data to {target_schema}.{table_name}")
+            conn.execute(text(f"""
+                INSERT INTO {target_schema}.{table_name} ({columns_str})
+                SELECT {columns_str} FROM public.{table_name}
+            """))
+
+        except Exception as e:
+            logger.error(f"Error copying {table_name}: {str(e)}")
+            # Continue with next table rather than failing entire migration
+            continue
 
 def get_target_schema():
     """Minimal schema name fetch with validation."""
@@ -59,8 +167,7 @@ def upgrade():
     
     # Create schema if it doesn't exist
     if not conn.execute(
-        text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :schema"),
-        {'schema': target_schema}
+        text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
     ).scalar():
         conn.execute(text(f"CREATE SCHEMA {target_schema}"))
 
@@ -84,6 +191,9 @@ def upgrade():
             except Exception as e:
                 logger.error(f"Failed to apply {file}: {str(e)}")
                 raise
+
+        # COPY DATA FROM PUBLIC SCHEMA
+        copy_data_with_dependencies(conn, target_schema)
 
         # Set the search path for the database after successful migration
         logger.info(f"Setting database search_path to include {target_schema}")
@@ -109,8 +219,7 @@ def downgrade():
 
     # Check if schema exists
     if not conn.execute(
-        text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :schema"),
-        {'schema': target_schema}
+        text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
     ).scalar():
         logger.info(f"Schema {target_schema} does not exist, nothing to downgrade")
         return
