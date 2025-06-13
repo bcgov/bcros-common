@@ -63,9 +63,14 @@ def getconn(db_config: DBConfig) -> object:
             user=db_config.user,
             ip_type=db_config.ip_type,
             driver="pg8000",
-            enable_iam_auth=True,
-            options=f"-c search_path={db_config.schema if db_config.schema != 'public' else 'public'}"
+            enable_iam_auth=True
         )
+
+        # Set schema if specified (with proper SQL escaping)
+        if db_config.schema and db_config.schema != 'public':
+            with conn.cursor() as cursor:
+                stmt = "SET search_path TO %s"
+                cursor.execute(stmt, (db_config.schema,))
 
         return conn
 
