@@ -66,11 +66,9 @@ def getconn(db_config: DBConfig) -> object:
             enable_iam_auth=True
         )
 
-        # Set schema if specified (with proper SQL escaping)
-        if db_config.schema and db_config.schema != 'public':
-            with conn.cursor() as cursor:
-                stmt = "SET search_path TO %s"
-                cursor.execute(stmt, (db_config.schema,))
+        cursor = conn.cursor()
+        cursor.execute(f"SET search_path TO {db_config.schema}")
+        cursor.close()
 
         return conn
 
