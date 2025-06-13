@@ -3,7 +3,6 @@
 set -e
 
 # Simple configuration - edit these values directly when needed
-ACTION="upgrade"
 SCHEMA="public" 
 ARGS="head"
 
@@ -17,8 +16,3 @@ docker compose up -d postgres
 echo "Waiting for Postgres to be ready..."
 docker compose exec postgres sh -c "until pg_isready -U notifyuser; do sleep 2; done;"
 echo "Postgres is ready!"
-
-# Run migrations using alembic directly instead of flask db
-# docker compose run --rm migration alembic $ACTION $ARGS
-
-# echo "Migration complete!"
