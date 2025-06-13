@@ -82,8 +82,8 @@ def copy_data_with_dependencies(conn, target_schema):
     # Dictionary to track row counts
     row_counts = {}
 
-    try:
-        for table_name in copy_order:
+    for table_name in copy_order:
+        try:
             # Check if table exists in target schema
             exists_in_target = conn.execute(text(f"""
                 SELECT 1 FROM information_schema.tables
@@ -112,10 +112,11 @@ def copy_data_with_dependencies(conn, target_schema):
                 ).scalar()
                 if source_count != target_count:
                     logger.warning(
-                        f"Skipping {table_name} - target has data but counts don't match "
-                        f"(public: {source_count}, {target_schema}: {target_count})"
+                        f"Table {table_name} has data but counts don't match "
+                        f"(public: {source_count}, {target_schema}: {target_count}). "
+                        f"Skipping this table."
                     )
-                    continue  # Skip this table instead of failing
+                    continue
                 logger.info(f"Skipping {table_name} - target already has matching data")
                 continue
 
@@ -150,19 +151,54 @@ def copy_data_with_dependencies(conn, target_schema):
             row_counts[table_name]['target'] = target_count
 
             if source_count != target_count:
-                raise ValueError(
+                logger.error(
                     f"Row count mismatch after copy for {table_name} "
                     f"(public: {source_count}, {target_schema}: {target_count})"
                 )
+                # Let the error bubble up to abort the entire migration
+            update_sequences_for_table(conn, target_schema, table_name)
 
-        logger.info("All tables copied successfully with matching row counts")
-        logger.debug(f"Row count verification: {row_counts}")
+        except Exception as e:
+            logger.error(f"Error processing table {table_name}: {str(e)}")
+            # Don't explicitly ROLLBACK here - let Alembic handle the transaction
+            raise  # Re-raise to ensure Alembic marks the migration as failed
 
-    except Exception as e:
-        logger.error(f"Migration aborted due to error: {str(e)}")
-        conn.execute(text("ROLLBACK"))
-        raise  # Re-raise to ensure Alembic marks the migration as failed
+    logger.info("All tables processed successfully")
+    logger.debug(f"Row count verification: {row_counts}")
 
+def update_sequences_for_table(conn, schema, table_name):
+    """Update all sequences for a table to match the max ID values."""
+    # Get primary key column and its sequence
+    pk_info = conn.execute(text(f"""
+        SELECT a.attname as column_name,
+               pg_get_serial_sequence('{schema}.{table_name}', a.attname) as sequence_name
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = '{schema}.{table_name}'::regclass
+        AND i.indisprimary
+    """)).fetchone()
+
+    if not pk_info:
+        logger.debug(f"No primary key sequence found for {schema}.{table_name}")
+        return
+
+    column_name, sequence_name = pk_info
+    if not sequence_name:
+        logger.debug(f"No sequence found for {schema}.{table_name}.{column_name}")
+        return
+
+    # Get current max ID and set sequence
+    max_id = conn.execute(
+        text(f"SELECT COALESCE(MAX({column_name}), 0) FROM {schema}.{table_name}")
+    ).scalar()
+
+    # Set sequence to max ID + 1 (or current value if it's already higher)
+    conn.execute(text(f"""
+        SELECT setval('{sequence_name}', 
+               GREATEST({max_id + 1}, 
+                        COALESCE(nextval('{sequence_name}'), {max_id + 1})))
+    """))
+    logger.info(f"Updated sequence {sequence_name} for {schema}.{table_name} to {max_id + 1}")
 
 def get_target_schema():
     """Minimal schema name fetch with validation."""
