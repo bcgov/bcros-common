@@ -194,11 +194,6 @@ def update_sequences_for_table(conn, schema, table_name):
         text(f"SELECT COALESCE(MAX({column_name}), 0) FROM {schema}.{table_name}")
     ).scalar()
 
-    # Extract sequence name without schema prefix
-    sequence_name_parts = sequence_name.split('.')
-    seq_name = sequence_name_parts[-1]
-    seq_schema = sequence_name_parts[0] if len(sequence_name_parts) > 1 else schema
-
     # Set sequence to max ID + 1 without advancing the sequence
     # The 'false' parameter means the sequence is marked as not called,
     # so the next nextval() will return exactly this value
