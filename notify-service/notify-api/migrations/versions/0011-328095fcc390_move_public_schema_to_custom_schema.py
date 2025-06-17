@@ -189,17 +189,23 @@ def update_sequences_for_table(conn, schema, table_name):
         logger.debug(f"No sequence found for {schema}.{table_name}.{column_name}")
         return
 
-    # Get current max ID and set sequence
+    # Get current max ID
     max_id = conn.execute(
         text(f"SELECT COALESCE(MAX({column_name}), 0) FROM {schema}.{table_name}")
     ).scalar()
 
-    # Set sequence to max ID + 1 (or current value if it's already higher)
+    # Extract sequence name without schema prefix
+    sequence_name_parts = sequence_name.split('.')
+    seq_name = sequence_name_parts[-1]
+    seq_schema = sequence_name_parts[0] if len(sequence_name_parts) > 1 else schema
+
+    # Set sequence to max ID + 1 without advancing the sequence
+    # The 'false' parameter means the sequence is marked as not called,
+    # so the next nextval() will return exactly this value
     conn.execute(text(f"""
-        SELECT setval('{sequence_name}', 
-               GREATEST({max_id + 1}, 
-                        COALESCE(nextval('{sequence_name}'), {max_id + 1})))
+        SELECT setval('{sequence_name}', {max_id + 1}, false)
     """))
+
     logger.info(f"Updated sequence {sequence_name} for {schema}.{table_name} to {max_id + 1}")
 
 def get_target_schema():
@@ -302,7 +308,6 @@ def downgrade():
         conn.execute(text(f"DROP SCHEMA {target_schema} CASCADE"))
 
         logger.info("Downgrade completed successfully")
-
     except Exception as e:
         logger.error(f"Downgrade failed: {str(e)}")
         raise
