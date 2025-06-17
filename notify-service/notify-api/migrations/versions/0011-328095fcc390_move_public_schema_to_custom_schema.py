@@ -15,6 +15,8 @@ from pathlib import Path
 from alembic import op
 from sqlalchemy.sql import text
 
+from notify_api.config import MigrationConfig
+
 # revision identifiers, used by Alembic.
 revision = '328095fcc390'
 down_revision = 'd6a8ffda6b9c'
@@ -231,25 +233,24 @@ def upgrade():
     conn = op.get_bind()
     
     # Save original search path
-    result = conn.execute(text('SHOW search_path'))
-    original_search_path = result.scalar()
+    original_search_path = conn.execute(text('SHOW search_path')).scalar()
     logger.info(f"Original search path: {original_search_path}")
     
-    # Create schema if it doesn't exist
-    if not conn.execute(
-        text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
-    ).scalar():
-        conn.execute(text(f"CREATE SCHEMA {target_schema}"))
-
     try:
-        # Set search path to ONLY the target schema
-        conn.execute(text(f"SET search_path TO {target_schema}"))
-        logger.info(f"Set search path to {target_schema} only")
+        # Create schema if it doesn't exist
+        if not conn.execute(
+            text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
+        ).scalar():
+            conn.execute(text(f"CREATE SCHEMA {target_schema}"))
 
+        # Set search path for this connection only
+        conn.execute(text(f"SET LOCAL search_path TO {target_schema}"))
+        logger.info(f"Set connection search_path to {target_schema}")
+
+        # Run all previous migrations in the new schema
         migrations_dir = Path(__file__).parent.parent / 'versions'
         for file in get_migration_files():
             if file == os.path.basename(__file__):
-                logger.info(f"Skipping current migration file {file}")
                 continue
 
             file_path = migrations_dir / file
@@ -257,7 +258,6 @@ def upgrade():
                 module = load_migration_module(file_path)
                 logger.info(f"Applying {file} in schema {target_schema}")
                 module.upgrade()
-                logger.info(f"Successfully applied {file}")
             except Exception as e:
                 logger.error(f"Failed to apply {file}: {str(e)}")
                 raise
@@ -265,17 +265,17 @@ def upgrade():
         # COPY DATA FROM PUBLIC SCHEMA
         copy_data_with_dependencies(conn, target_schema)
 
-        # Set the search path for the database after successful migration
-        logger.info(f"Setting database search_path to include {target_schema}")
-        conn.execute(text(f"""
-            ALTER DATABASE {conn.engine.url.database}
-            SET search_path TO {target_schema}, public
-        """))
+        logger.info("Migration completed successfully (without ALTER DATABASE)")
 
+    except Exception as e:
+        logger.error(f"Migration failed: {str(e)}")
+        raise
     finally:
-        # Always restore original search path for the connection
-        conn.execute(text(f"SET search_path TO {original_search_path}"))
-        logger.info(f"Restored connection search path to {original_search_path}")
+        # Always restore original search path
+        try:
+            conn.execute(text(f"SET search_path TO {original_search_path}"))
+        except Exception as e:
+            logger.error(f"Failed to restore search path: {str(e)}")
 
 def downgrade():
     target_schema = get_target_schema()
@@ -284,23 +284,25 @@ def downgrade():
     if target_schema == 'public':
         logger.info("Target schema is public, skipping downgrade")
         return
-    
+
     conn = op.get_bind()
 
-    # Check if schema exists
-    if not conn.execute(
-        text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
-    ).scalar():
-        logger.info(f"Schema {target_schema} does not exist, nothing to downgrade")
-        return
-    
-    # Drop the schema with all its contents
-    conn.execute(text(f"DROP SCHEMA {target_schema} CASCADE"))
-    logger.info(f"Dropped schema {target_schema}")
-    
-    # Reset database search path to default
-    conn.execute(text(f"""
-        ALTER DATABASE {conn.engine.url.database}
-        SET search_path TO "$user", public
-    """))
-    logger.info("Reset database search path to default")
+    try:
+        # Check if schema exists
+        schema_exists = conn.execute(
+            text(f"SELECT 1 FROM information_schema.schemata WHERE schema_name = '{target_schema}'")
+        ).scalar()
+
+        if not schema_exists:
+            logger.info(f"Schema {target_schema} does not exist, nothing to downgrade")
+            return
+
+        # Then drop the schema
+        logger.info(f"Dropping schema {target_schema}")
+        conn.execute(text(f"DROP SCHEMA {target_schema} CASCADE"))
+
+        logger.info("Downgrade completed successfully")
+
+    except Exception as e:
+        logger.error(f"Downgrade failed: {str(e)}")
+        raise
