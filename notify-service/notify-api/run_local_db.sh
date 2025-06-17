@@ -4,7 +4,6 @@ set -e
 
 # Simple configuration - edit these values directly when needed
 SCHEMA="public" 
-ARGS="head"
 
 # Set environment variables
 export NOTIFY_DATABASE_SCHEMA=$SCHEMA
