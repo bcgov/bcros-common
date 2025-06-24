@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from flask import Flask
 from flask_cors import CORS
 from google.cloud.sql.connector import Connector
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from structured_logging import StructuredLogging
 
 from notify_api import models
@@ -66,10 +68,6 @@ def getconn(db_config: DBConfig) -> object:
             enable_iam_auth=True
         )
 
-        cursor = conn.cursor()
-        cursor.execute(f"SET search_path TO {db_config.schema}")
-        cursor.close()
-
         return conn
 
 
@@ -80,6 +78,15 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
     app.url_map.strict_slashes = False
 
     CORS(app, resources="*")
+
+    schema = app.config.get("DB_SCHEMA", "public")
+
+    @event.listens_for(Engine, "connect")
+    def set_search_path(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute(f"SET search_path TO {schema}")
+        cursor.close()
+        logger.info(f"Set search path to {schema} for new database connection")
 
     if app.config["DB_INSTANCE_CONNECTION_NAME"]:
         db_config = DBConfig(
