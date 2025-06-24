@@ -45,7 +45,6 @@ class DBConfig:
     database: str
     user: str
     ip_type: str
-    schema: str
 
 
 def getconn(db_config: DBConfig) -> object:
@@ -93,8 +92,7 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
             instance_name=app.config["DB_INSTANCE_CONNECTION_NAME"],
             database=app.config["DB_NAME"],
             user=app.config["DB_USER"],
-            ip_type="private",
-            schema=app.config.get("DB_SCHEMA", "public"),
+            ip_type="private"
         )
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"creator": lambda: getconn(db_config)}
 
