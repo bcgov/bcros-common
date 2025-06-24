@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from flask import Flask
 from flask_cors import CORS
 from google.cloud.sql.connector import Connector
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from structured_logging import StructuredLogging
 
 from notify_api import models
@@ -43,16 +45,14 @@ class DBConfig:
     database: str
     user: str
     ip_type: str
-    schema: str
 
 
-def getconn(db_config: DBConfig) -> object:
-    """Create a database connection.
+def getconn(db_config: DBConfig, target_schema: str = None) -> object:
+    """Create a database connection with optional schema setting.
 
     Args:
-        connector (Connector): The Google Cloud SQL connector instance.
         db_config (DBConfig): The database configuration.
-
+        target_schema (str, optional): The schema to set for the connection. Defaults to None.
     Returns:
         object: A connection object to the database.
     """
@@ -66,9 +66,10 @@ def getconn(db_config: DBConfig) -> object:
             enable_iam_auth=True
         )
 
-        cursor = conn.cursor()
-        cursor.execute(f"SET search_path TO {db_config.schema}")
-        cursor.close()
+        if target_schema:
+            cursor = conn.cursor()
+            cursor.execute(f"SET search_path TO {target_schema},public")
+            cursor.close()
 
         return conn
 
@@ -81,15 +82,32 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
 
     CORS(app, resources="*")
 
+    schema = app.config.get("DB_SCHEMA", "public")
+
     if app.config["DB_INSTANCE_CONNECTION_NAME"]:
         db_config = DBConfig(
             instance_name=app.config["DB_INSTANCE_CONNECTION_NAME"],
             database=app.config["DB_NAME"],
             user=app.config["DB_USER"],
-            ip_type="private",
-            schema=app.config.get("DB_SCHEMA", "public"),
+            ip_type="private"
         )
-        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"creator": lambda: getconn(db_config)}
+
+        if run_mode == "migration":
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+                "creator": lambda: getconn(db_config)
+            }
+        else:
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+                "creator": lambda: getconn(db_config, schema),
+                "pool_pre_ping": True,
+                "pool_recycle": 300
+            }
+
+            @event.listens_for(db.engine, "checkout")
+            def set_search_path_on_checkout(dbapi_connection, connection_record, connection_proxy):
+                """Ensure schema is set when connection is checked out from pool"""
+                with dbapi_connection.cursor() as cursor:
+                    cursor.execute(f"SET search_path TO {schema},public")
 
     db.init_app(app)
 
