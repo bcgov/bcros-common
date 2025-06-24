@@ -80,7 +80,6 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
 
     schema = app.config.get("DB_SCHEMA", "public")
 
-    @event.listens_for(Engine, "connect")
     def set_search_path(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()
         cursor.execute(f"SET search_path TO {schema}")
@@ -97,6 +96,10 @@ def create_app(run_mode=APP_RUNNING_ENVIRONMENT):
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"creator": lambda: getconn(db_config)}
 
     db.init_app(app)
+
+    with app.app_context():
+        # This attaches the listener only to this specific engine
+        event.listen(db.engine, "connect", set_search_path)
 
     if run_mode == "migration":
         from flask_migrate import Migrate, upgrade
