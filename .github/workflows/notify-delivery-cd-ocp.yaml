@@ -20,7 +20,7 @@ on:
 
 jobs:
   notify-delivery-cd:
-    uses: bcgov/bcregistry-sre/.github/workflows/backend-cd-ocp.yaml@main
+    uses: bcgov/bcregistry-sre/.github/workflows/backend-cd-ocp.yaml@feature-ocp-sandbox-deploy
     with:
       target: ${{ inputs.target }}
       app_name: "notify-delivery"
