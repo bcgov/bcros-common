@@ -25,7 +25,6 @@ jobs:
       target: ${{ inputs.target }}
       app_name: "notify-delivery"
       working_directory: "./notify-service/notify-delivery"
-      project: ${{ inputs.target == 'sandbox' && 'tools' || '' }}
 
     secrets:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
