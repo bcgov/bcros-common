@@ -284,7 +284,7 @@ def upgrade():
             {"document_type": "INV", "document_class": "CORP", "document_type_desc": "Investigation", "product": "business", "doc_id_required": False, "active": False, "application_id": "SCAN"},
             {"document_type": "NATB", "document_class": "CORP", "document_type_desc": "Nature of Business", "product": "business", "doc_id_required": False, "active": False, "application_id": "SCAN"},
             {"document_type": "NWP", "document_class": "CORP", "document_type_desc": "NWPTA", "product": "business", "doc_id_required": False, "active": False, "application_id": "SCAN"},
-            {"document_type": "APP_FILE", "document_class": "OTHER", "document_type_desc": "Application document", "product": "business", "doc_id_required": False, "active": False, "application_id": "ALL"},
+            {"document_type": "APP_FILE", "document_class": "OTHER", "document_type_desc": "Application document", "product": "business", "doc_id_required": False, "active": True, "application_id": "ALL"},
         ],
     )
 
