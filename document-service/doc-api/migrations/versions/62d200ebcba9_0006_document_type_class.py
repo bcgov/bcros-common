@@ -37,6 +37,7 @@ def upgrade():
     op.bulk_insert(
         document_type_classes,
         [
+            {"document_type": "ANNR", "document_class": "COOP", "active": True},
             {"document_type": "CLW", "document_class": "COOP", "active": False},
             {"document_type": "COFI", "document_class": "COOP", "active": True},
             {"document_type": "CONT", "document_class": "COOP", "active": True},
@@ -90,6 +91,7 @@ def upgrade():
             {"document_type": "SUPP", "document_class": "CORP", "active": True},
             {"document_type": "SYSR", "document_class": "CORP", "active": True},
             {"document_type": "ADDR", "document_class": "FIRM", "active": True},
+            {"document_type": "ANNR", "document_class": "FIRM", "active": True},
             {"document_type": "CNVF", "document_class": "FIRM", "active": True},
             {"document_type": "CONT", "document_class": "FIRM", "active": True},
             {"document_type": "COPN", "document_class": "FIRM", "active": True},
