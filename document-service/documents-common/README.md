@@ -1,7 +1,7 @@
 # documents-common
 
 This directory contains common Vue components designed for reuse and extension in multiple Nuxt projects.  
-Components here are framework-agnostic and should follow best practices for maintainability and flexibility.
+Components here should follow best practices for maintainability and flexibility.
 
 ## Usage
 
@@ -24,16 +24,42 @@ To use `documents-common` as an external Nuxt layer (such as from a package or a
 
 1\. Install `documents-common` as a dependency \(via npm, Git, or workspace\)\.
 
+```json
+// package.json
+{
+  "dependencies": {
+    "documents-common": "^1.0.0"
+  }
+}
+```
+To use `documents-common` directly from a Git repository, specify the repo URL in your `package.json` dependencies, then reference it in `nuxt.config.ts`. Here’s how:
+
+**Example: Install from Git and use as a layer**
+
+```json
+// package.json
+{
+  "dependencies": {
+    "documents-common": "git+https://github.com/your-org/documents-common.git"
+  }
+}
+```
+
 2\. Reference the package in your `nuxt.config.ts`:
 
 ```typescript
 // nuxt.config.ts
 export default defineNuxtConfig({
   layers: [
-    { src: 'documents-common' } // Use the package name or path
+    { src: 'documents-common' } // Uses the installed Git repo as a layer
   ]
 })
 ```
+
+**Explanation:**
+- Add the Git repo to your dependencies.
+- Nuxt will resolve the layer from `node_modules/documents-common`.
+- You can then import components using the Nuxt alias as shown previously.
 
 3\. Import components or composables using the Nuxt alias:
 
