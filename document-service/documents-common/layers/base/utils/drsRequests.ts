@@ -3,6 +3,7 @@ import type {
   ApiResponseOrError,
   RequestDataIF
 } from '~/interfaces/request-interfaces'
+import { SessionStorageKeys } from `~/enums/sessionStorageKeys`
 
 /**
  * Converts a document to PDF by sending a POST request to the PDF conversion API.
@@ -15,12 +16,17 @@ export async function pdfConversion(document: RequestDataIF)
   const config = useRuntimeConfig()
   const baseURL = config.public.documentsApiURL
   const docApiKey = config.public.documentsApiKey
+  const authorization = `Bearer ${sessionStorage.getItem(SessionStorageKeys.KeyCloakToken)}`
+  const currentAccount = sessionStorage.getItem(SessionStorageKeys.CurrentAccount)
+
 
   const options = {
     method: 'POST',
     headers: {
       'Accept': 'application/pdf',
       'x-apikey': `${docApiKey}`,
+      'Account-Id': JSON.parse(currentAccount)?.id,
+      authorization
     },
     body: document
   }
