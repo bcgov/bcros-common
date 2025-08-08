@@ -95,8 +95,8 @@ const showValidationError = computed(() =>
         <template #description>
           <div class="grid">
             <span v-if="showValidationError" class="text-red-600">
-            No documents have been uploaded. Please upload the required document.
-          </span>
+              No documents have been uploaded. Please upload the required document.
+            </span>
             {{ uploadDescription }}
           </div>
         </template>
@@ -114,21 +114,21 @@ const showValidationError = computed(() =>
         </template>
 
         <template #file="{ file, index }">
-            <div class="w-24">
-              <VuePdfEmbed
-                v-if="file?.uploaded"
-                :source="getObjectURL(file?.document)"
-                :page="[1]"
-                :width="105"
-                :key="file?.document?.name"
+          <div class="w-24">
+            <VuePdfEmbed
+              v-if="file?.uploaded"
+              :source="getObjectURL(file?.document)"
+              :page="[1]"
+              :width="105"
+              :key="file?.document?.name"
+            />
+            <div v-else class="w-[105px] h-20 rounded bg-gray-100 flex items-center">
+              <UIcon
+                name="i-mdi-image-outline"
+                class="w-7 h-7 m-auto"
               />
-              <div v-else class="w-[105px] h-20 rounded bg-gray-100 flex items-center">
-                <UIcon
-                  name="i-mdi-image-outline"
-                  class="w-7 h-7 m-auto"
-                />
-              </div>
             </div>
+          </div>
 
           <div class="w-full ml-4">
             <template v-if="file.errorMsg">
@@ -168,5 +168,4 @@ const showValidationError = computed(() =>
     </UFormField>
   </UForm>
 </template>
-max-width: 6.5rem;
 
