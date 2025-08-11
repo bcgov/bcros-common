@@ -100,6 +100,7 @@ export function useFileHandler(options: FileHandlerOptionsIF = {}) {
    * @param {File[]} files - Array of files to handle.
    */
   const fileHandler = async (files: File[]) => {
+    console.log('FileHandler: ', files)
     // Check if already processing to prevent multiple uploads at once
     if (isProcessing.value) return
     isProcessing.value = true
