@@ -682,8 +682,8 @@
               <td>
                 ${{"%.2f"|format(invoice.total-invoice.get('serviceFees', 0)-invoice.get('gst', 0)) if invoice.total else '0.00'}}
               </td>
-              <td>${{"%.2f"|format(invoice.gst) if invoice.get('gst', 0) else '0.00'}}</td>
               <td>${{"%.2f"|format(invoice.get('serviceFees', 0))}}</td>
+              <td>${{"%.2f"|format(invoice.gst) if invoice.get('gst', 0) else '0.00'}}</td>
               <td class="total-elements-price">
                 ${{"%.2f"|format(invoice.total) if invoice.total else '0.00'}}
               </td>
