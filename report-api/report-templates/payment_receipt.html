@@ -660,7 +660,7 @@
                 </td>
                 <td>{{invoice.get('folioNumber','-')}}</td>
                 <td>{{invoice.createdOn}}</td>
-                <td>${{"%.2f"|format((item.filingFees+item.futureEffectiveFees+item.priorityFees+item.get('gst',0))) if (item.total) else
+                <td>${{"%.2f"|format((item.filingFees+item.futureEffectiveFees+item.priorityFees)) if (item.total) else
                   '0.00'}}</td>
                 <td>${{"%.2f"|format(item.get('serviceFees', 0))}}</td>
                 <td>${{"%.2f"|format(item.get('gst', 0))}}</td>
