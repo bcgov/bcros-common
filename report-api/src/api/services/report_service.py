@@ -15,17 +15,13 @@
 """Service to  manage report-templates."""
 
 import base64
-from io import BytesIO
 
 from dateutil import parser
 from flask import current_app, url_for
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
-import pikepdf
 import requests
-from weasyprint import HTML
 
-from api.services.page_info import get_pdf_page_count
 from api.services.chunk_report_service import ChunkReportService
 from api.utils.util import TEMPLATE_FOLDER_PATH
 
@@ -75,22 +71,13 @@ class ReportService:
                 template_args,
                 generate_page_number,
             )
-        elif is_statement and generate_page_number:
-            #footer_template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH}/statement_footer.html')
-            #footer_html = footer_template.render(template_args)
-            return ReportService._generate_pdf_with_page_numbers(
-                template_name, 
-                template_args, 
-                html_out
-            )
         return ReportService.generate_pdf(html_out, generate_page_number, footer_html=footer_html)
-    
+
     @staticmethod
     def generate_pdf(html_out, generate_page_number: bool = False, footer_html: str = None):
         """Generate pdf out of the html using Gotenberg."""
         gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
         endpoint = f"{gotenberg_url}/forms/chromium/convert/html"
-        
 
         files = [("files", ("index.html", html_out, "text/html"))]
         data = {}
@@ -117,12 +104,12 @@ class ReportService:
         page_args = template_args.copy()
         page_args['current_page'] = current_page
         page_args['total_pages'] = total_pages
-        
+
         footer_html = footer_template.render(page_args)
-        
+
         # Create empty HTML content
         empty_html = """<!DOCTYPE html>"""
-        
+
         files = [
             ("files", ("index.html", empty_html, "text/html")),
             ("files", ("footer.html", footer_html, "text/html"))
@@ -137,75 +124,6 @@ class ReportService:
         )
         resp.raise_for_status()
         return resp.content
-      
-    @staticmethod
-    def _generate_pdf_with_page_numbers(template_name: str, template_args: object, html_out: str) -> bytes:
-        """Generate PDF with page numbers by overlaying footer HTML onto each page."""
-        # First pass: Generate complete PDF without page numbers
-        first_pass_pdf = ReportService.generate_pdf(html_out, False)
-        total_pages = get_pdf_page_count(first_pass_pdf)
-        
-        # Second pass: Generate footer PDFs for each page using the footer.html template
-        footer_pdfs = ReportService._generate_footer_pdfs(template_args, total_pages)
-        
-        # Third pass: Overlay footer PDFs onto main PDF pages
-        return ReportService._overlay_footer_pdfs_on_main_pdf(first_pass_pdf, footer_pdfs)
-
-    @staticmethod
-    def _generate_footer_pdfs(template_args: object, total_pages: int) -> list:
-        """Generate individual footer PDF for each page using footer.html template."""
-        footer_template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH}/statement_footer.html')
-        footer_pdfs = []
-        for i in range(total_pages):
-            footer_pdf = ReportService.generate_single_footer_pdf(footer_template, template_args, i + 1, total_pages)
-            footer_pdfs.append(footer_pdf)
-        return footer_pdfs
-
-    @staticmethod
-    def _overlay_footer_pdfs_on_main_pdf(main_pdf_bytes: bytes, footer_pdfs: list) -> bytes:
-        """Overlay footer PDFs onto each page of the main PDF."""
-        try:
-            with pikepdf.Pdf.open(BytesIO(main_pdf_bytes)) as main_pdf:
-                result_pdf = pikepdf.Pdf.new()
-                
-                # Process each page
-                for i, main_page in enumerate(main_pdf.pages):
-                    result_pdf.pages.append(main_page)
-                    new_page = result_pdf.pages[-1]  # Get the newly added page
-                    
-                    # If we have a footer PDF for this page, overlay it
-                    if i < len(footer_pdfs):
-                        try:
-                            with pikepdf.Pdf.open(BytesIO(footer_pdfs[i])) as footer_pdf:
-                                if len(footer_pdf.pages) > 0:
-                                    footer_page = footer_pdf.pages[0]
-
-                                    ReportService._overlay_page_content(new_page, footer_page)
-                        except Exception as e:
-                            current_app.logger.warning(f"Could not overlay footer on page {i+1}: {e}")
-                
-                # Save result
-                output_buffer = BytesIO()
-                result_pdf.save(output_buffer)
-                return output_buffer.getvalue()
-                
-        except Exception as e:
-            current_app.logger.error(f"Error overlaying footer PDFs: {e}")
-
-            return main_pdf_bytes
-
-    @staticmethod
-    def _overlay_page_content(base_page, overlay_page):
-        """Overlay content from overlay_page onto base_page using pikepdf."""
-        try:
-            if hasattr(base_page, 'add_overlay'):
-                base_page.add_overlay(overlay_page)
-                return
-                    
-        except Exception as e:
-            current_app.logger.warning(f"Could not overlay page content: {e}")
-            pass
-
     @classmethod
     def create_report_from_stored_template(
         cls,

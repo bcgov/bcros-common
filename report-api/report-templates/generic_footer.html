@@ -10,13 +10,19 @@
               {% endif %}
               </div>
           <div class="footer-info">
-              {% if statement and statement.is_interim_statement %}
+              {% if current_template == 'invoice' %}
+              <span>Invoice Number: {{invoiceNumber}}</span>
+              {% elif current_template == 'revenue_letter' %}
+              <span>Service BC Connect</span>
+              {% elif statement and statement.is_interim_statement %}
               <span>Interim Account Statement #{{statement.id}}</span>
               {% elif statement %}
               <span>Account Statement #{{statement.id}}</span>
               {% endif %}
               {% if current_page and total_pages %}
-              Page {{ current_page }} of {{ total_pages }}
+              <span>Page {{ current_page }} of {{ total_pages }}</span>
+              {% else %}
+              Page <span class="pageNumber"></span> of <span class="totalPages"></span>
               {% endif %}
           </div>
       </td>

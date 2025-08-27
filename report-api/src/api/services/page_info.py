@@ -9,5 +9,5 @@ def get_pdf_page_count(pdf_content: bytes) -> int:
     try:
         with pikepdf.Pdf.open(BytesIO(pdf_content)) as pdf:
             return len(pdf.pages)
-    except Exception as e:
+    except Exception:  # pylint: disable=broad-exception-caught
         return 1
