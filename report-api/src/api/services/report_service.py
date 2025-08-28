@@ -14,6 +14,7 @@
 
 """Service to  manage report-templates."""
 
+import asyncio
 import base64
 
 from dateutil import parser
@@ -23,6 +24,7 @@ from jinja2.sandbox import SandboxedEnvironment
 import requests
 
 from api.services.chunk_report_service import ChunkReportService
+from api.services.page_info import get_pdf_page_count
 from api.utils.util import TEMPLATE_FOLDER_PATH
 
 
@@ -64,17 +66,17 @@ class ReportService:
         """Route to chunk only when statement_report has groupedInvoices; else render directly."""
         is_statement = 'statement_report' in (template_name or '')
         has_grouped_invoices = bool((template_args or {}).get('groupedInvoices'))
-        footer_html = None
+
         if is_statement and has_grouped_invoices:
             return ChunkReportService.create_chunk_report(
                 template_name,
                 template_args,
                 generate_page_number,
             )
-        return ReportService.generate_pdf(html_out, generate_page_number, footer_html=footer_html)
+        return ReportService.generate_pdf(template_name,html_out, generate_page_number, template_args)
 
     @staticmethod
-    def generate_pdf(html_out, generate_page_number: bool = False, footer_html: str = None):
+    def generate_pdf(template_name, html_out, generate_page_number: bool = False, template_args: dict = None): # pylint:disable=too-many-locals
         """Generate pdf out of the html using Gotenberg."""
         gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
         endpoint = f"{gotenberg_url}/forms/chromium/convert/html"
@@ -82,10 +84,6 @@ class ReportService:
         files = [("files", ("index.html", html_out, "text/html"))]
         data = {}
 
-        if generate_page_number and footer_html:
-            files.append(("files", ("footer.html", footer_html, "text/html")))
-            data["footer"] = "footer.html"
-
         resp = requests.post(
             endpoint,
             files=files,
@@ -93,37 +91,33 @@ class ReportService:
             timeout=120
         )
         resp.raise_for_status()
-        return resp.content
+        main_pdf_bytes = resp.content
 
-    @staticmethod
-    def generate_single_footer_pdf(footer_template, template_args: dict, current_page: int, total_pages: int):
-        """Generate PDF with only footer content, empty page content."""
-        gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
-        endpoint = f"{gotenberg_url}/forms/chromium/convert/html"
 
-        page_args = template_args.copy()
-        page_args['current_page'] = current_page
-        page_args['total_pages'] = total_pages
+        template_requires_page_numbers = any(name in template_name for name in ['routing_slip_report', 'payment_receipt'])
+        if template_requires_page_numbers:
+            generate_page_number = True
+        if generate_page_number:
+            total_pages = get_pdf_page_count(main_pdf_bytes)
 
-        footer_html = footer_template.render(page_args)
+            # Build footer batches using the same footer template and overlay CSS as chunk service
+            footer_args = dict(template_args or {})
+            footer_args['current_template'] = template_name
+            batch_tasks = ChunkReportService._prepare_footer_batch_tasks(footer_args, total_pages, batch_size=200)
 
-        # Create empty HTML content
-        empty_html = """<!DOCTYPE html>"""
+            # Render footer batches to PDFs in parallel (reuse chunk service async worker)
+            footer_multi_page_pdfs = asyncio.run(
+                ChunkReportService._render_tasks_parallel_async(batch_tasks, current_app.root_path)
+            )
 
-        files = [
-            ("files", ("index.html", empty_html, "text/html")),
-            ("files", ("footer.html", footer_html, "text/html"))
-        ]
-        data = {"footer": "footer.html"}
+            footer_pdfs = []
+            for pdf in footer_multi_page_pdfs:
+                footer_pdfs.extend(ChunkReportService._split_pdf_pages(pdf))
 
-        resp = requests.post(
-            endpoint,
-            files=files,
-            data=data,
-            timeout=120
-        )
-        resp.raise_for_status()
-        return resp.content
+            return ChunkReportService._overlay_footer_pdfs_on_main_pdf(main_pdf_bytes, footer_pdfs)
+
+        return main_pdf_bytes
+
     @classmethod
     def create_report_from_stored_template(
         cls,

@@ -85,18 +85,15 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         gc.collect()
         gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
 
-        # Prepare the HTML content for Gotenberg
         html_data = html_out.encode('utf-8')
 
-        # Create multipart form data for Gotenberg
         data = aiohttp.FormData()
         data.add_field('index.html', html_data, filename='index.html', content_type='text/html')
 
-        # Call Gotenberg using the shared session
         async with session.post(
             f'{gotenberg_url}/forms/chromium/convert/html',
             data=data,
-            timeout=aiohttp.ClientTimeout(total=500)  # 500 second timeout
+            timeout=aiohttp.ClientTimeout(total=500)
         ) as response:
             if response.status == 200:
                 pdf_content = await response.read()
@@ -169,7 +166,6 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         results: List[Tuple[int, bytes]] = []
 
         async with aiohttp.ClientSession() as session:
-            # Create all tasks with shared session
             async_tasks = []
             order_ids = []
             for oid, html_out in tasks:
@@ -179,10 +175,8 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
                 async_tasks.append(task)
                 order_ids.append(oid)
 
-            # Run all tasks concurrently using gather
             pdf_contents = await asyncio.gather(*async_tasks)
 
-            # Combine results with order IDs
             for oid, pdf_content in zip(order_ids, pdf_contents):
                 results.append((oid, pdf_content))
 
@@ -237,11 +231,9 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         try:
             with pikepdf.Pdf.open(io.BytesIO(pdf_bytes)) as pdf:
                 for i, page in enumerate(pdf.pages):
-                    # create new PDF for each page
                     single_page_pdf = pikepdf.Pdf.new()
                     single_page_pdf.pages.append(page)
 
-                    # save to bytes
                     output_buffer = io.BytesIO()
                     single_page_pdf.save(output_buffer)
                     individual_pdfs.append(output_buffer.getvalue())
@@ -265,8 +257,8 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
                     result_pdf.pages.append(main_page)
                     new_page = result_pdf.pages[-1]  # Get the newly added page
 
-                    # If we have a footer PDF for this page, overlay it
-                    if i < len(footer_pdfs):
+                    has_footer_pdf = i < len(footer_pdfs)
+                    if has_footer_pdf:
                         try:
                             with pikepdf.Pdf.open(
                                 io.BytesIO(footer_pdfs[i])
@@ -301,7 +293,7 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
             pass
 
     @staticmethod
-    def create_chunk_report(
+    def create_chunk_report( # pylint:disable=too-many-locals
         template_name: str,
         template_vars: Dict[str, Any],
         generate_page_number: bool = False,
@@ -333,7 +325,6 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
             f"_render_tasks_parallel_async: {len(tasks)} tasks, elapsed={t1-t0:.2f}s"
         )
 
-        # Convert PDF bytes to temp files for merging
         for pdf_content in pdf_chunks:
             ChunkReportService._append_pdf_bytes(pdf_content, temp_files)
 

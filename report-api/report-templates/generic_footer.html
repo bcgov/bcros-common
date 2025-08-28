@@ -14,6 +14,21 @@
               <span>Invoice Number: {{invoiceNumber}}</span>
               {% elif current_template == 'revenue_letter' %}
               <span>Service BC Connect</span>
+              {% elif current_template == 'routing_slip_report' %}
+              <span>Ministry of Citizens' Services, BC Registries and Online Services</span>
+              {% elif current_template == 'payment_receipt' %}
+                  {% if invoice['corpTypeCode'] != 'NRO' %}
+                  {% if filingIdentifier %}
+                  <span>Filing #{{filingIdentifier}}</span>
+                  {% endif %}
+                  {% if invoice['businessIdentifier'] %}
+                  {% if invoice['corpTypeCode'] in ('SP','GP') %}
+                  <span>Registration #{{invoice['businessIdentifier']}}</span>
+                  {% else %}
+                  <span>Incorporation #{{invoice['businessIdentifier']}}</span>
+                  {% endif %}
+                  {% endif %}
+                  {% endif %}
               {% elif statement and statement.is_interim_statement %}
               <span>Interim Account Statement #{{statement.id}}</span>
               {% elif statement %}
