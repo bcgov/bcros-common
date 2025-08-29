@@ -34,10 +34,12 @@
               {% elif statement %}
               <span>Account Statement #{{statement.id}}</span>
               {% endif %}
-              {% if current_page and total_pages %}
-              <span>Page {{ current_page }} of {{ total_pages }}</span>
-              {% else %}
-              Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+              {% if generate_page_number %}
+                {% if current_page and total_pages %}
+                <span>Page {{ current_page }} of {{ total_pages }}</span>
+                {% else %}
+                Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+                {% endif %}
               {% endif %}
           </div>
       </td>

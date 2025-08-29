@@ -26,10 +26,9 @@
                 }
 
                 @page {
-                    size: Letter;
+                    size: A4;
                     margin: 0.75cm 0.75cm 0 0.75cm;
-                    margin-bottom: 2.5cm;
-                    margin-top: 200px;
+                    margin-bottom: 100px;
                 }
 
                 @media print {
@@ -90,9 +89,9 @@
                 }
 
                 .statement-letterhead {
-                    width: 97.8%;
-                    position: fixed;
-                    top: -185px;
+                    width: 100%;
+                    position: relative;
+                    top: 0;
                 }
 
                 .statement-letterhead td {
@@ -107,14 +106,6 @@
                     justify-content: space-between;
                     vertical-align: bottom;
                     padding-bottom: 20px;
-                }
-
-                .statement-letterhead-top td:first-of-type {
-                    padding-left: 24px;
-                }
-
-                .statement-letterhead-top td:last-of-type {
-                    padding-right: 24px;
                 }
 
                 .statement-letterhead-top .r-title {
@@ -143,17 +134,17 @@
                     font-size: 16px;
                     font-family: 'BCSans-Bold', sans-serif;
                     margin: 0;
+                    width: 93.5%;
                 }
 
                 .statement-details {
                     width: 100%;
-                    margin-top: -25px
+                    background: #e2e7ed;
                 }
 
                 .statement-details td>div {
-                    background: #e2e7ed;
-                    padding: 16px 24px;
-                    font-size: 14px;
+                  padding: 16px 24px 16px 24px;
+                  font-size: 14px;
                 }
 
                 .statement-details td>div>div+div {
@@ -161,7 +152,7 @@
                 }
 
                 .statement-details td>div span {
-                    width: 200px;
+                    width: 100%;
                     display: inline-block;
                 }
 

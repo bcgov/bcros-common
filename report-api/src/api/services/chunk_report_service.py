@@ -15,7 +15,6 @@
 
 """Service for generating large reports using chunk approach."""
 import asyncio
-import gc
 import io
 import os
 import tempfile
@@ -23,12 +22,11 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-import aiohttp
 from flask import current_app, url_for
 from jinja2 import Environment, FileSystemLoader
-import pikepdf
 
-from api.services.page_info import get_pdf_page_count
+from api.services.footer_service import add_page_numbers_to_pdf
+from api.services.gotenberg_service import GotenbergService
 from api.utils.util import TEMPLATE_FOLDER_PATH
 
 
@@ -77,30 +75,6 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
             temp_file.write(pdf_content)
             temp_files.append(temp_file.name)
-
-    @staticmethod
-    async def _render_pdf_bytes_worker_gotenberg_with_session(args: Tuple[str, str], session: aiohttp.ClientSession) -> bytes:
-        """Worker used to render HTML string to PDF bytes using Gotenberg with shared session."""
-        html_out = args[0]
-        gc.collect()
-        gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
-
-        html_data = html_out.encode('utf-8')
-
-        data = aiohttp.FormData()
-        data.add_field('index.html', html_data, filename='index.html', content_type='text/html')
-
-        async with session.post(
-            f'{gotenberg_url}/forms/chromium/convert/html',
-            data=data,
-            timeout=aiohttp.ClientTimeout(total=500)
-        ) as response:
-            if response.status == 200:
-                pdf_content = await response.read()
-                gc.collect()
-                return pdf_content
-            error_text = await response.text()
-            raise Exception(f"Gotenberg conversion failed with status {response.status}: {error_text}")
 
     @staticmethod
     def _build_chunk_html(
@@ -158,142 +132,7 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         return tasks
 
     @staticmethod
-    async def _render_tasks_parallel_async(
-        tasks: List[Tuple[int, str]],
-        base_url: str,
-    ) -> List[bytes]:
-        """Render HTML tasks in parallel using shared session for better performance."""
-        results: List[Tuple[int, bytes]] = []
-
-        async with aiohttp.ClientSession() as session:
-            async_tasks = []
-            order_ids = []
-            for oid, html_out in tasks:
-                task = ChunkReportService._render_pdf_bytes_worker_gotenberg_with_session(
-                    (html_out, base_url), session
-                )
-                async_tasks.append(task)
-                order_ids.append(oid)
-
-            pdf_contents = await asyncio.gather(*async_tasks)
-
-            for oid, pdf_content in zip(order_ids, pdf_contents):
-                results.append((oid, pdf_content))
-
-        return [pdf for _, pdf in sorted(results, key=lambda x: x[0])]
-
-    @staticmethod
-    def _prepare_footer_batch_tasks(template_args: dict, total_pages: int, batch_size: int = 200) -> List[Tuple[int, str]]:
-        """prepare footer batch tasks"""
-        footer_template = ChunkReportService._TEMPLATE_ENV.get_template(
-            f"{TEMPLATE_FOLDER_PATH}/generic_footer.html"
-        )
-        overlay_style = ChunkReportService._TEMPLATE_ENV.get_template(
-            f"{TEMPLATE_FOLDER_PATH}/styles/footer_overlay.html"
-        ).render()
-        optimized_args = template_args.copy()
-
-        tasks: List[Tuple[int, str]] = []
-        batch_id = 0
-
-        for batch_start in range(1, total_pages + 1, batch_size):
-            batch_end = min(batch_start + batch_size, total_pages + 1)
-
-            batch_html_parts = ["<!DOCTYPE html><html><head>"]
-
-            batch_html_parts.append(overlay_style)
-            batch_html_parts.append("</head><body>")
-
-            for page_num in range(batch_start, batch_end):
-                page_args = optimized_args.copy()
-                page_args["current_page"] = page_num
-                page_args["total_pages"] = total_pages
-
-                footer_html = footer_template.render(page_args)
-
-                batch_html_parts.append(
-                    f'<div class="footer-page" id="footer-page-{page_num}"><div class="footer-anchor">{footer_html}</div></div>'
-                )
-
-            batch_html_parts.append("</body></html>")
-            batch_html = "".join(batch_html_parts)
-
-            tasks.append((batch_id, batch_html))
-            batch_id += 1
-
-        return tasks
-
-    @staticmethod
-    def _split_pdf_pages(pdf_bytes: bytes) -> List[bytes]:
-        """Split a multi-page PDF into individual page PDFs."""
-        individual_pdfs = []
-
-        try:
-            with pikepdf.Pdf.open(io.BytesIO(pdf_bytes)) as pdf:
-                for i, page in enumerate(pdf.pages):
-                    single_page_pdf = pikepdf.Pdf.new()
-                    single_page_pdf.pages.append(page)
-
-                    output_buffer = io.BytesIO()
-                    single_page_pdf.save(output_buffer)
-                    individual_pdfs.append(output_buffer.getvalue())
-
-        except Exception as e:
-            current_app.logger.error(f"Error splitting PDF pages: {e}")
-            raise
-
-        return individual_pdfs
-
-    @staticmethod
-    def _overlay_footer_pdfs_on_main_pdf(
-        main_pdf_bytes: bytes, footer_pdfs: list
-    ) -> bytes:
-        """Overlay footer PDFs onto each page of the main PDF."""
-        try:
-            with pikepdf.Pdf.open(io.BytesIO(main_pdf_bytes)) as main_pdf:
-                result_pdf = pikepdf.Pdf.new()
-
-                for i, main_page in enumerate(main_pdf.pages):
-                    result_pdf.pages.append(main_page)
-                    new_page = result_pdf.pages[-1]  # Get the newly added page
-
-                    has_footer_pdf = i < len(footer_pdfs)
-                    if has_footer_pdf:
-                        try:
-                            with pikepdf.Pdf.open(
-                                io.BytesIO(footer_pdfs[i])
-                            ) as footer_pdf:
-                                if len(footer_pdf.pages) > 0:
-                                    footer_page = footer_pdf.pages[0]
-                                    ChunkReportService._overlay_page_content(
-                                        new_page, footer_page
-                                    )
-                        except Exception as e:
-                            current_app.logger.warning(
-                                f"Could not overlay footer on page {i+1}: {e}"
-                            )
-
-                output_buffer = io.BytesIO()
-                result_pdf.save(output_buffer)
-                return output_buffer.getvalue()
-
-        except Exception as e:
-            current_app.logger.error(f"Error overlaying footer PDFs: {e}")
-            return main_pdf_bytes
-
-    @staticmethod
-    def _overlay_page_content(base_page, overlay_page):
-        """Overlay content from overlay_page onto base_page using pikepdf."""
-        try:
-            if hasattr(base_page, "add_overlay"):
-                base_page.add_overlay(overlay_page)
-                return
-        except Exception as e:
-            current_app.logger.warning(f"Could not overlay page content: {e}")
-            pass
-
-    @staticmethod
-    def create_chunk_report( # pylint:disable=too-many-locals
+    def create_chunk_report(
         template_name: str,
         template_vars: Dict[str, Any],
         generate_page_number: bool = False,
@@ -316,13 +155,8 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         base_url = current_app.root_path
 
         # First pass: render all chunks to PDF bytes in parallel (no footers)
-        t0 = time.time()
         pdf_chunks = asyncio.run(
-            ChunkReportService._render_tasks_parallel_async(tasks, base_url)
-        )
-        t1 = time.time()
-        current_app.logger.info(
-            f"_render_tasks_parallel_async: {len(tasks)} tasks, elapsed={t1-t0:.2f}s"
+            GotenbergService.render_tasks_parallel_async(tasks, base_url)
         )
 
         for pdf_content in pdf_chunks:
@@ -332,28 +166,9 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
 
         ChunkReportService._cleanup_temp_files(temp_files)
 
-        if generate_page_number:
-            total_pages = get_pdf_page_count(merged_pdf_without_footers)
-            batch_tasks = ChunkReportService._prepare_footer_batch_tasks(
-                template_vars, total_pages, batch_size=200
-            )
-            footer_multi_page_pdfs = asyncio.run(
-                ChunkReportService._render_tasks_parallel_async(
-                    batch_tasks, current_app.root_path
-                )
-            )
-            footer_pdfs: List[bytes] = []
-            for pdf in footer_multi_page_pdfs:
-                footer_pdfs.extend(ChunkReportService._split_pdf_pages(pdf))
+        result = add_page_numbers_to_pdf(template_vars, merged_pdf_without_footers, generate_page_number)
 
-            result = ChunkReportService._overlay_footer_pdfs_on_main_pdf(
-                merged_pdf_without_footers, footer_pdfs
-            )
-        else:
-            result = merged_pdf_without_footers
-
-        elapsed = time.time() - overall_start_time
         current_app.logger.info(
-            "chunk_report done: chunks=%s elapsed=%.1fs", len(tasks), elapsed
+            "chunk_report done: chunks=%s elapsed=%.1fs", len(tasks), time.time() - overall_start_time
         )
         return result

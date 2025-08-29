@@ -14,17 +14,16 @@
 
 """Service to  manage report-templates."""
 
-import asyncio
 import base64
 
 from dateutil import parser
-from flask import current_app, url_for
+from flask import url_for
 from jinja2 import Environment, FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
-import requests
 
 from api.services.chunk_report_service import ChunkReportService
-from api.services.page_info import get_pdf_page_count
+from api.services.footer_service import add_page_numbers_to_pdf
+from api.services.gotenberg_service import GotenbergService
 from api.utils.util import TEMPLATE_FOLDER_PATH
 
 
@@ -78,45 +77,12 @@ class ReportService:
     @staticmethod
     def generate_pdf(template_name, html_out, generate_page_number: bool = False, template_args: dict = None): # pylint:disable=too-many-locals
         """Generate pdf out of the html using Gotenberg."""
-        gotenberg_url = current_app.config.get('GOTENBERG_URL', 'http://localhost:3000')
-        endpoint = f"{gotenberg_url}/forms/chromium/convert/html"
 
-        files = [("files", ("index.html", html_out, "text/html"))]
-        data = {}
+        main_pdf_bytes = GotenbergService.convert_html_to_pdf_sync(html_out).content
 
-        resp = requests.post(
-            endpoint,
-            files=files,
-            data=data,
-            timeout=120
-        )
-        resp.raise_for_status()
-        main_pdf_bytes = resp.content
-
-
-        template_requires_page_numbers = any(name in template_name for name in ['routing_slip_report', 'payment_receipt'])
-        if template_requires_page_numbers:
-            generate_page_number = True
-        if generate_page_number:
-            total_pages = get_pdf_page_count(main_pdf_bytes)
-
-            # Build footer batches using the same footer template and overlay CSS as chunk service
-            footer_args = dict(template_args or {})
-            footer_args['current_template'] = template_name
-            batch_tasks = ChunkReportService._prepare_footer_batch_tasks(footer_args, total_pages, batch_size=200)
-
-            # Render footer batches to PDFs in parallel (reuse chunk service async worker)
-            footer_multi_page_pdfs = asyncio.run(
-                ChunkReportService._render_tasks_parallel_async(batch_tasks, current_app.root_path)
-            )
-
-            footer_pdfs = []
-            for pdf in footer_multi_page_pdfs:
-                footer_pdfs.extend(ChunkReportService._split_pdf_pages(pdf))
-
-            return ChunkReportService._overlay_footer_pdfs_on_main_pdf(main_pdf_bytes, footer_pdfs)
-
-        return main_pdf_bytes
+        footer_args = dict(template_args or {})
+        footer_args['current_template'] = template_name
+        return add_page_numbers_to_pdf(footer_args, main_pdf_bytes, generate_page_number)
 
     @classmethod
     def create_report_from_stored_template(
