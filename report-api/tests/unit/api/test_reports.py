@@ -21,8 +21,6 @@ Test suite for reports
 import base64
 import json
 
-import pytest
-
 from .base_test import get_claims, token_header
 from api.services import report_service
 
@@ -181,7 +179,9 @@ def _inline_tpl():
     html = '<html><body>ok</body></html>'
     return base64.b64encode(html.encode('utf-8')).decode('utf-8')
 
+
 def test_statement_grouped_invoices(client, jwt, app, monkeypatch):
+    """Test statement grouped invoices."""
     monkeypatch.setattr(
         report_service.ChunkReportService,
         '_build_chunk_html',

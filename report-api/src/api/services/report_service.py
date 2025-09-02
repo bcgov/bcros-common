@@ -72,12 +72,16 @@ class ReportService:
                 template_args,
                 generate_page_number,
             )
-        return ReportService.generate_pdf(template_name,html_out, generate_page_number, template_args)
+        return ReportService.generate_pdf(template_name, html_out, generate_page_number, template_args)
 
     @staticmethod
-    def generate_pdf(template_name, html_out, generate_page_number: bool = False, template_args: dict = None): # pylint:disable=too-many-locals
+    def generate_pdf(
+        template_name,
+        html_out,
+        generate_page_number: bool = False,
+        template_args: dict = None
+    ):
         """Generate pdf out of the html using Gotenberg."""
-
         main_pdf_bytes = GotenbergService.convert_html_to_pdf_sync(html_out).content
 
         footer_args = dict(template_args or {})

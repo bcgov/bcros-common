@@ -15,6 +15,7 @@
 """Common setup and fixtures for the py-test suite used by this service."""
 
 import pytest
+import requests as _req
 
 from api import create_app
 from api import jwt as _jwt
@@ -78,15 +79,13 @@ def docker_compose_files(pytestconfig):
 @pytest.fixture
 def mock_gotenberg_requests(monkeypatch):
     """Mock requests.post to simulate Gotenberg PDF generation response."""
-    import requests as _req
-    
     class MockGotenbergResponse:
         status_code = 200
         content_type = 'application/pdf'
         content = b'%PDF-1.7\n%mock_pdf_content'
-        
+
         def raise_for_status(self):
             return None
-    
+
     monkeypatch.setattr(_req, 'post', lambda *args, **kwargs: MockGotenbergResponse())
     return MockGotenbergResponse
