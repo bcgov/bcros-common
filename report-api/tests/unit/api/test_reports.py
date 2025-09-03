@@ -65,7 +65,7 @@ def test_generate_report_with_invalid_template(client, jwt, app):
     assert rv.status_code == 404
 
 
-def test_generate_report_with_template(client, jwt, app, mock_gotenberg_requests):
+def test_generate_report_with_template(client, jwt, app):
     """Call to generate report with new template."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
     headers = {'Authorization': f'Bearer {token}', 'content-type': 'application/json'}
@@ -85,7 +85,7 @@ def test_generate_report_with_template(client, jwt, app, mock_gotenberg_requests
     assert rv.content_type == 'application/pdf'
 
 
-def test_generate_report_with_page_number(client, jwt, app, mock_gotenberg_requests):
+def test_generate_report_with_page_number(client, jwt, app):
     """Call to generate report with new template."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
     headers = {'Authorization': f'Bearer {token}', 'content-type': 'application/json'}
