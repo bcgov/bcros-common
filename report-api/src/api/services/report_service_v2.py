@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Service to  manage report-templates."""
+"""Service to  manage report-templates."""  # pylint: disable=duplicate-code
 
 import base64
 
@@ -20,11 +20,11 @@ from dateutil import parser
 from flask import url_for
 from jinja2 import Environment, FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
-from weasyprint import HTML
 
-from api.services.page_info import populate_page_count, populate_page_info
-from api.services.chunk_report_service import ChunkReportService
-from api.utils.util import TEMPLATE_FOLDER_PATH
+from api.services.chunk_report_service_v2 import ChunkReportService
+from api.services.footer_service import add_page_numbers_to_pdf
+from api.services.gotenberg_service import GotenbergService
+from api.utils.util import TEMPLATE_FOLDER_PATH_V2
 
 
 def format_datetime(value, format='short'):  # pylint: disable=redefined-builtin
@@ -65,13 +65,28 @@ class ReportService:
         """Route to chunk only when statement_report has groupedInvoices; else render directly."""
         is_statement = 'statement_report' in (template_name or '')
         has_grouped_invoices = bool((template_args or {}).get('groupedInvoices'))
+
         if is_statement and has_grouped_invoices:
             return ChunkReportService.create_chunk_report(
                 template_name,
                 template_args,
                 generate_page_number,
             )
-        return ReportService.generate_pdf(html_out, generate_page_number)
+        return ReportService.generate_pdf(template_name, html_out, generate_page_number, template_args)
+
+    @staticmethod
+    def generate_pdf(
+        template_name,
+        html_out,
+        generate_page_number: bool = False,
+        template_args: dict = None
+    ):
+        """Generate pdf out of the html using Gotenberg."""
+        main_pdf_bytes = GotenbergService.convert_html_to_pdf_sync(html_out).content
+
+        footer_args = dict(template_args or {})
+        footer_args['current_template'] = template_name
+        return add_page_numbers_to_pdf(footer_args, main_pdf_bytes, generate_page_number)
 
     @classmethod
     def create_report_from_stored_template(
@@ -81,7 +96,7 @@ class ReportService:
         generate_page_number: bool = False,
     ):
         """Create a report from a stored template."""
-        template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH}/{template_name}.html')
+        template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH_V2}/{template_name}.html')
         bc_logo_url = url_for('static', filename='images/bcgov-logo-vert.jpg')
         registries_url = url_for('static', filename='images/reg_logo.png')
         html_out = template.render(
@@ -114,24 +129,3 @@ class ReportService:
             html_out=html_out,
             generate_page_number=generate_page_number,
         )
-
-    @staticmethod
-    def generate_pdf(html_out, generate_page_number: bool = False):
-        """Generate pdf out of the html."""
-        html = HTML(string=html_out).render(optimize_size=('fonts', 'images',))
-        if generate_page_number:
-            html = populate_page_info(html)
-
-        return html.write_pdf()
-
-    @staticmethod
-    def populate_page_info(
-        html,
-    ):  # deprecated shim, prefer api.services.page_info.populate_page_info
-        """Shim for backward compatibility; delegates to shared helper."""
-        return populate_page_info(html)
-
-    @staticmethod
-    def populate_page_count(box, count, total):  # deprecated shim
-        """Shim for backward compatibility; delegates to shared helper."""
-        return populate_page_count(box, count, total)

@@ -18,7 +18,8 @@ from flask import Response, abort, request
 from flask_restx import Namespace, Resource
 from jinja2 import TemplateNotFound
 
-from api.services import CsvService, ReportService
+from api.services import CsvService
+from api.services.report_service_v2 import ReportService
 from api.utils.auth import jwt as _jwt
 
 

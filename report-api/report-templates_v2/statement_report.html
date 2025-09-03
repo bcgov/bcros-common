@@ -376,6 +376,8 @@
 
     .page-break-before {
       page-break-before: always;
+      break-before: page;
+      -webkit-break-before: page;
     }
 
     .no-margin {
@@ -398,18 +400,18 @@
     <div class="page-break-before">
       {% set is_index_0 = data.is_index_0 %}
 
-      {% include 'report-templates/statement_header.html' with context %}
+      {% include 'report-templates_v2/statement_header.html' with context %}
     </div>
 
-    {% include 'report-templates/statement_details.html' with context %}
-    {% include 'report-templates/statement_transactions.html' with context %}
+    {% include 'report-templates_v2/statement_details.html' with context %}
+    {% include 'report-templates_v2/statement_transactions.html' with context %}
   {% endfor %}
   {% if not groupedInvoices %}
     <div class="page-break-before">
-      {% include 'report-templates/statement_header.html' %}
+      {% include 'report-templates_v2/statement_header.html' %}
     </div>
-    {% include 'report-templates/statement_details.html' %}
-    {% include 'report-templates/statement_transactions.html' %}
+    {% include 'report-templates_v2/statement_details.html' %}
+    {% include 'report-templates_v2/statement_transactions.html' %}
   {% endif %}
 
   <!-- EFT Instructions -->
@@ -417,11 +419,11 @@
     {% set payment_method = 'EFT' %}
     {% set is_payment_instructions = true %}
     <div class="inner-wrap page-break-before">
-      {% include 'report-templates/statement_header.html' %}
+      {% include 'report-templates_v2/statement_header.html' %}
       <h2>Payment Instructions</h2>
     </div>
-    {% include 'report-templates/eft/eft_instructions_details.html' %}
-    {% include 'report-templates/eft/eft_instructions_charges.html' %}
+    {% include 'report-templates_v2/eft/eft_instructions_details.html' %}
+    {% include 'report-templates_v2/eft/eft_instructions_charges.html' %}
   {% endif %}
 </body>
 </html>

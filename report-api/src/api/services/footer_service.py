@@ -23,7 +23,7 @@ from flask import current_app
 from jinja2 import Environment, FileSystemLoader
 
 from api.services.gotenberg_service import GotenbergService
-from api.utils.util import TEMPLATE_FOLDER_PATH
+from api.utils.util import TEMPLATE_FOLDER_PATH_V2
 
 _TEMPLATE_ENV = Environment(
     loader=FileSystemLoader('.'), autoescape=True
@@ -99,10 +99,10 @@ def _prepare_footer_batch_tasks(
 ) -> List[Tuple[int, str]]:
     """Prepare footer batch tasks."""
     footer_template = _TEMPLATE_ENV.get_template(
-        f'{TEMPLATE_FOLDER_PATH}/generic_footer.html'
+        f'{TEMPLATE_FOLDER_PATH_V2}/generic_footer.html'
     )
     overlay_style = _TEMPLATE_ENV.get_template(
-        f'{TEMPLATE_FOLDER_PATH}/styles/footer_overlay.html'
+        f'{TEMPLATE_FOLDER_PATH_V2}/styles/footer_overlay.html'
     ).render()
 
     tasks: List[Tuple[int, str]] = []

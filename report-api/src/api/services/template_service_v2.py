@@ -20,7 +20,7 @@ import os.path
 
 from jinja2 import Environment, FileSystemLoader
 
-from api.utils.util import TEMPLATE_FOLDER_PATH
+from api.utils.util import TEMPLATE_FOLDER_PATH_V2
 
 
 ENV = Environment(loader=FileSystemLoader('.'))
@@ -33,7 +33,7 @@ class TemplateService:
     def find_all_templates():
         """Get all templates."""
         template_names = []
-        list_of_files = os.listdir(TEMPLATE_FOLDER_PATH)
+        list_of_files = os.listdir(TEMPLATE_FOLDER_PATH_V2)
         for filename in list_of_files:
             if fnmatch.fnmatch(filename, '*.html'):
                 template_names.append(os.path.splitext(filename)[0])
@@ -42,6 +42,6 @@ class TemplateService:
     @classmethod
     def get_stored_template(cls, templatename: str, ):
         """Get a stored template."""
-        template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH}/{templatename}.html')
+        template = ENV.get_template(f'{TEMPLATE_FOLDER_PATH_V2}/{templatename}.html')
         html_template = template.render()
         return html_template

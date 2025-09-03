@@ -19,6 +19,7 @@ A simple decorator to add the options method to a Request Class.
 # from functools import wraps
 
 TEMPLATE_FOLDER_PATH = 'report-templates/'
+TEMPLATE_FOLDER_PATH_V2 = 'report-templates_v2/'
 
 
 def cors_preflight(methods: str = 'GET'):

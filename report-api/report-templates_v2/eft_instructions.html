@@ -1,0 +1,17 @@
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <!DOCTYPE html>
+    {% include 'report-templates_v2/styles/fonts.html' %}
+    {% include 'report-templates_v2/styles/layout.html' %}
+    {% include 'report-templates_v2/styles/header.html' %}
+    {% include 'report-templates_v2/styles/footer.html' %}
+</head>
+<body>
+    {% include 'report-templates_v2/eft/eft_instructions_header.html' %}
+    {% include 'report-templates_v2/eft/eft_instructions_details.html' %}
+    <div class="page-break-before">
+      {% include 'report-templates_v2/eft/eft_instructions_charges.html' %}
+    </div>
+</body>
+</html>

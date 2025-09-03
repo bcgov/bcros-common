@@ -27,11 +27,12 @@ from sbc_common_components.exception_handling.exception_handler import Exception
 from .meta import API as META_API
 from .ops import API as OPS_API
 from .report import API as REPORT_API
+from .report_v2 import API as REPORT_V2_API
 from .swaggerhelper import Api
 from .templates import API as TEMPLATES_API
 
 
-__all__ = ('API_BLUEPRINT', 'OPS_BLUEPRINT')
+__all__ = ('API_BLUEPRINT', 'API_V2_BLUEPRINT', 'OPS_BLUEPRINT')
 
 # This will add the Authorize button to the swagger docs
 AUTHORIZATIONS = {
@@ -69,3 +70,20 @@ API.add_namespace(META_API, path='/meta')
 
 API.add_namespace(REPORT_API, path='/reports')
 API.add_namespace(TEMPLATES_API, path='/templates')
+
+API_V2_BLUEPRINT = Blueprint('API_V2', __name__, url_prefix='/api/v2')
+
+API_V2 = Api(
+    API_V2_BLUEPRINT,
+    title='Report API V2',
+    version='2.0',
+    description='Report API V2',
+    security=['apikey'],
+    authorizations=AUTHORIZATIONS
+)
+
+HANDLER_V2 = ExceptionHandler(API_V2)
+
+API_V2.add_namespace(META_API, path='/meta')
+API_V2.add_namespace(REPORT_V2_API, path='/reports')
+API_V2.add_namespace(TEMPLATES_API, path='/templates')

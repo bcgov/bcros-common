@@ -33,9 +33,10 @@ def create_app(run_mode=os.getenv('FLASK_ENV', 'production')):
     app = Flask(__name__)
     app.config.from_object(config.CONFIGURATION[run_mode])  # pylint: disable=no-member
 
-    from api.resources import API_BLUEPRINT, OPS_BLUEPRINT  # pylint: disable=import-outside-toplevel
+    from api.resources import API_BLUEPRINT, API_V2_BLUEPRINT, OPS_BLUEPRINT  # pylint: disable=import-outside-toplevel
 
     app.register_blueprint(API_BLUEPRINT)
+    app.register_blueprint(API_V2_BLUEPRINT)
     app.register_blueprint(OPS_BLUEPRINT)
 
     setup_jwt_manager(app, jwt)

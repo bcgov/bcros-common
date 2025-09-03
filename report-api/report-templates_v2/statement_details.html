@@ -1,0 +1,30 @@
+<table class="statement-details">
+    <tbody>
+        <tr>
+            <td colspan="2">
+                <div>
+                    <div><span class="font-bold">Account Number:</span> {{ account.id }}</div>
+                    {% if is_index_0 %}
+                        <div><span class="font-bold">Statement Total</span> <span class="font-bold">${{ total.due }}</span></div>
+                        <div><span class="font-bold">Total Amount Paid:</span> <span class="font-bold">${{ total_paid }}</span></div>
+                        {% if eft_payment %}
+                            <div><span class="font-bold">Total Amount Owing:</span> <span class="font-bold">${{ statement.amount_owing }}</span></div>
+                        {% endif %}
+                        {% if statement.is_interim_statement %}
+                            <div><span class="font-bold">Payment Received Date:</span>
+                                {{ statementSummary.latestStatementPaymentDate }}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        {% if not statement.is_interim_statement and is_index_0 and statementSummary.dueDate %}
+                            <div><span class="font-bold">Payment Due Date:</span> {{ statementSummary.dueDate }}</div>
+                        {% endif %}
+                    {% endif %}
+                    {% if is_index_0 %}
+                        <div><span class="font-bold">Statement Number:</span> {{statement.id}}</div>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
