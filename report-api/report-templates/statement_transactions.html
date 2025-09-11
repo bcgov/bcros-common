@@ -99,22 +99,22 @@
               </div>
           </td>
         </tr>
-        {% if data.refunds_total %}
+        {% if (data.refunds_total | default(0) | float) > 0 %}
         <tr>
           <td colspan="2">
               <div class="total-elements_no_border">
                   Refunds:
-                  <span class="total-elements-price">${{ '%.2f' % (data.refunds_total if data else 0.0) }}</span>
+                  <span class="total-elements-price">${{ '%.2f' % data.refunds_total }}</span>
               </div>
           </td>
         </tr>
         {% endif %}
-        {% if data.credits_total %}
+        {% if (data.credits_total | default(0) | float) > 0 %}
         <tr>
           <td colspan="2">
               <div class="total-elements_no_border">
                   Credits:
-                  <span class="total-elements-price">${{ '%.2f' % (data.credits_total if data else 0.0) }}</span>
+                  <span class="total-elements-price">${{ '%.2f' % data.credits_total }}</span>
               </div>
           </td>
         </tr>
