@@ -320,6 +320,12 @@
       border-bottom: 1px solid #b3bac3;
     }
 
+    .total-elements_no_border {
+      margin: 0px 24px;
+      font-size: 14px;
+      border-bottom: none;
+    }
+
     .total-elements-price {
       float: right;
       font-family: 'BCSans-Regular', sans-serif;
@@ -419,7 +425,7 @@
     {% if hasPaymentInstructions and data.payment_method == 'EFT' %}
       {% set payment_method = 'EFT' %}
       {% set is_payment_instructions = true %}
-      <div class="inner-wrap page-break-before">
+      <div class="inner-wrap eft-instruction">
         {% include 'report-templates/statement_header.html' %}
         <h2>Payment Instructions</h2>
       </div>
