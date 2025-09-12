@@ -99,7 +99,7 @@
               </div>
           </td>
         </tr>
-        {% if data.refunds_total %}
+        {% if data and data.refunds_total %}
         <tr>
           <td colspan="2">
               <div class="total-elements_no_border">
@@ -109,7 +109,7 @@
           </td>
         </tr>
         {% endif %}
-        {% if data.credits_total %}
+        {% if data and data.credits_total %}
         <tr>
           <td colspan="2">
               <div class="total-elements_no_border">

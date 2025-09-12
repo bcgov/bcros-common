@@ -4,8 +4,9 @@
             <td colspan="2">
                 <div>
                     <div><span class="font-bold">Account Number:</span> {{ account.id }}</div>
+                    {% if not summary_header_text %}
                         {% if payment_method == 'PAD' %}
-                        <div><span class="font-bold">Pre-Authorized Debit Totals:</span> <span class="font-bold">${{ data.totals_summary }}</span></div>
+                        <div><span class="font-bold">Pre-Authorized Debit Totals:</span> <span class="font-bold">${{ '%.2f' % data.totals_summary }}</span></div>
                         <div><span class="font-bold">Amount Owing:</span> <span class="font-bold">${{ statement.amount_owing }}</span></div>
                         {% elif payment_method == 'ONLINE_BANKING' %}
                         <div><span class="font-bold">Online Banking Totals:</span> <span class="font-bold">${{ '%.2f' % data.totals_summary }}</span></div>
@@ -28,7 +29,8 @@
                                 {{ statementSummary.latestStatementPaymentDate }}
                             </div>
                         {% endif %}
-                        <div><span class="font-bold">Statement Number:</span> {{statement.id}}</div>
+                    {% endif %}
+                    <div><span class="font-bold">Statement Number:</span> {{statement.id}}</div>
                 </div>
             </td>
         </tr>
