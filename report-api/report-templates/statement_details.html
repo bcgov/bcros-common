@@ -16,8 +16,8 @@
                         <div><span class="font-bold">BC OnLine Totals:</span> <span class="font-bold">${{ '%.2f' % data.totals_summary }}</span></div>
                         {% endif %}
                         {% if eft_payment %}
-                            <div><span class="font-bold">EFT Totals:</span> <span class="font-bold">${{ data.totals_summary }}</span></div>
-                            <div><span class="font-bold">Amount Owing:</span> <span class="font-bold">${{ data.due_summary }}</span></div>
+                            <div><span class="font-bold">EFT Totals:</span> <span class="font-bold">${{ '%.2f' % data.totals_summary }}</span></div>
+                            <div><span class="font-bold">Amount Owing:</span> <span class="font-bold">${{ '%.2f' % data.due_summary }}</span></div>
                             {% if statementSummary.dueDate %}
                             <div><span class="font-bold">Payment Due Date:</span> {{ statementSummary.dueDate }}</div>
                             {% endif %}
