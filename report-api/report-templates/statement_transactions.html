@@ -180,20 +180,10 @@
                 </td>
             </tr>
         {% else %}
-            {% if total.fees %}
             <tr>
                 <td colspan="2">
-                    <div class="total-elements font-bold">
-                            Total Amount:
-                            <span class="total-elements-price font-bold">${{ '%.2f' % (data.totals_summary if data else 0.0) }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements font-bold">
-                        Total Amount Paid:
+                    <div class="total-elements">
+                        Amount Paid:
                         <span class="total-elements-price font-bold">${{ '%.2f' % (data.paid_summary if data else 0.0) }}</span>
                     </div>
                 </td>
@@ -204,6 +194,28 @@
                     <div class="total-elements" style="border-bottom: none;">
                         Total Amount Due:
                         <span class="total-elements-price">${{ '%.2f' % (data.due_summary if data else 0.0) }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        {% endif %}
+        {% if payment_method == 'PAD' %}
+            {% if data.due_summary %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements font-bold" style="border-bottom: none;">
+                        Total Amount Owing:
+                        <span class="total-elements-price font-bold">${{ data.due_summary }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% if statementSummary.lastPADStatementPaidAmount %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements">
+                        Payment Received for Pending Transactions on Last Statement:
+                        <span class="total-elements-price">-${{ '%.2f' % statementSummary.lastPADStatementPaidAmount }}</span>
                     </div>
                 </td>
             </tr>
