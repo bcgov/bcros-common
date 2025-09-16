@@ -172,7 +172,7 @@
                 <td colspan="2">
                     <div class="total-elements font-bold" style="border-bottom: none;">
                         Total Amount Owing:
-                        <span class="total-elements-price font-bold">${{ data.due_summary }}</span>
+                        <span class="total-elements-price font-bold">${{ '%.2f' % data.due_summary }}</span>
                     </div>
                     {% if not statement.is_interim_statement %}
                         <div class="total-elements font-14"  style="border-bottom: none;">Payment Due Date: {{ statementSummary.dueDate }}</div>
