@@ -18,16 +18,16 @@
       {% for row in summaryPage.grouped_summary %}
           <tr>
               <td>{{ row.payment_method }}</td>
-              <td>{{ '%.2f' % row.totals_summary }}</td>
+              <td>${{ '%.2f' % row.totals_summary }}</td>
               <td>${{ '%.2f' % row.refunds_credits_total }}</td>
               <td>${{ '%.2f' % row.due_summary }}</td>
           </tr>
       {% endfor %}
       <thead>
         <th>Total:</th>
-        <th>{{ '%.2f' % summaryPage.total.totals_summary }}</th>
-        <th>{{ '%.2f' % summaryPage.total.refunds_credits_total }}</th>
-        <th>{{ '%.2f' % summaryPage.total.due_summary }}</th>
+        <th>${{ '%.2f' % summaryPage.total.totals_summary }}</th>
+        <th>${{ '%.2f' % summaryPage.total.refunds_credits_total }}</th>
+        <th>${{ '%.2f' % summaryPage.total.due_summary }}</th>
       </thead>
   </table>
 </div>

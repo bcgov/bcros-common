@@ -29,26 +29,48 @@
         {% for row in transactions %}
             <tr>
                 <td class="product-purchased">
-                    {% for product in row.products %}
-                    <div class="font-bold">{{ product }}</div>
-                    {% endfor %}
-                    {% if row.details %}
-                    <div class="transaction-details">
-                        {% for detail in row.details %}
-                        <div>{{ detail }}</div>
+                    {% if row.status_code in ['Credited', 'Refund complete', 'PARTIALLY_CREDITED', 'PARTIALLY_REFUNDED'] %}
+                        <div class="font-bold">
+                            {% if row.status_code == 'Credited' %}
+                                Refund as Credits
+                            {% elif row.status_code == 'Refund complete' %}
+                                Refunds
+                            {% elif row.status_code == 'PARTIALLY_CREDITED' %}
+                                Partially Refunds as Credits
+                            {% elif row.status_code == 'PARTIALLY_REFUNDED' %}
+                                Partially Refunds
+                            {% endif %}
+                        </div>
+                        {% for product in row.products %}
+                            <div>For: {{ product }}</div>
                         {% endfor %}
-                    </div>
+                        <div>Refunded Transaction ID: {{ row.id }}</div>
+                    {% else %}
+                        {% for product in row.products %}
+                        <div class="font-bold">{{ product }}</div>
+                        {% endfor %}
+                        {% if row.details %}
+                        <div class="transaction-details">
+                            {% for detail in row.details %}
+                            <div>{{ detail }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     {% endif %}
                 </td>
                 <td>{{ row.folio }}</td>
                 <td>{{ row.created_on }}</td>
-                <td>${{ row.fee }}</td>
-                <td>${{ row.service_fee }}</td>
-                <td>${{ row.gst }}</td>
+                <td>{{ row.fee }}</td>
+                <td>{{ row.service_fee }}</td>
+                <td>{{ row.gst }}</td>
                 <td>
-                    ${{ row.total }}
+                    {{ row.total }}
                     {% if row.status_code == 'APPROVED' %}
                     <br>(Pending)
+                    {% endif %}
+                    {% if row.status_code in ['PARTIALLY_CREDITED', 'PARTIALLY_REFUNDED'] %}
+                    <br>
+                      -${{ '%.2f' % (row.partial_refunds | sum(attribute='refund_amount')) }}
                     {% endif %}
                 </td>
             </tr>
@@ -104,7 +126,7 @@
           <td colspan="2">
               <div class="total-elements_no_border">
                   Refunds Received:
-                  <span class="total-elements-price">${{ '%.2f' % (data.refunds_total if data else 0.0) }}</span>
+                  <span class="total-elements-price">-${{ '%.2f' % (data.refunds_total if data else 0.0) }}</span>
               </div>
           </td>
         </tr>
@@ -114,7 +136,7 @@
           <td colspan="2">
               <div class="total-elements_no_border">
                   Credits Received:
-                  <span class="total-elements-price">${{ '%.2f' % (data.credits_total if data else 0.0) }}</span>
+                  <span class="total-elements-price">-${{ '%.2f' % (data.credits_total if data else 0.0) }}</span>
               </div>
           </td>
         </tr>
