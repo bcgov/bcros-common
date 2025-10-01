@@ -612,7 +612,7 @@
             {% if filingDateTime %}
             <div class="detail-row">
               <div class="detail-label">
-                {% if invoice['corpTypeCode'] == 'NRO' or invoice.get('isSubmission', False) is True %}
+                {% if invoice['corpTypeCode'] == 'NRO' or isSubmission %}
                 Submission Date & Time:
                 {% else %}
                 Filed Date and Time:

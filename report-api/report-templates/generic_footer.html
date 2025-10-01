@@ -19,7 +19,7 @@
               {% elif current_template == 'payment_receipt' %}
                   {% if invoice['corpTypeCode'] != 'NRO' %}
                   {% if filingIdentifier %}
-                  {% if invoice.get('isSubmission', False) is True}
+                  {% if isSubmission %}
                   <span>Submission #{{filingIdentifier}}</span>
                   {% else %}
                   <span>Filing #{{filingIdentifier}}</span>
