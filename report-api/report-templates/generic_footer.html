@@ -19,7 +19,11 @@
               {% elif current_template == 'payment_receipt' %}
                   {% if invoice['corpTypeCode'] != 'NRO' %}
                   {% if filingIdentifier %}
+                  {% if isSubmission %}
+                  <span>Submission #{{filingIdentifier}}</span>
+                  {% else %}
                   <span>Filing #{{filingIdentifier}}</span>
+                  {% endif %}
                   {% endif %}
                   {% if invoice['businessIdentifier'] %}
                   {% if invoice['corpTypeCode'] in ('SP','GP') %}
