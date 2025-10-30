@@ -19,7 +19,8 @@ class GotenbergService:
     @staticmethod
     async def _render_pdf_bytes_worker_gotenberg_with_session(
         args: Tuple[str, str],
-        session: aiohttp.ClientSession
+        session: aiohttp.ClientSession,
+        max_retries: int = 3
     ) -> bytes:
         """Worker used to render HTML string to PDF bytes using Gotenberg with shared session."""
         html_out = args[0]
@@ -28,45 +29,66 @@ class GotenbergService:
 
         html_data = html_out.encode('utf-8')
 
-        data = aiohttp.FormData()
-        data.add_field('index.html', html_data, filename='index.html', content_type='text/html')
+        for attempt in range(max_retries + 1):
+            try:
+                data = aiohttp.FormData()
+                data.add_field('index.html', html_data, filename='index.html', content_type='text/html')
 
-        async with session.post(
-            f'{gotenberg_url}/forms/chromium/convert/html',
-            data=data,
-            timeout=aiohttp.ClientTimeout(total=500)
-        ) as response:
-            if response.status == 200:
-                pdf_content = await response.read()
-                gc.collect()
-                return pdf_content
-            error_text = await response.text()
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f'Gotenberg conversion failed with status {response.status}: '
-                f'{error_text}'
-            )
+                async with session.post(
+                    f'{gotenberg_url}/forms/chromium/convert/html',
+                    data=data,
+                    timeout=aiohttp.ClientTimeout(total=500),
+                ) as response:
+                    if response.status == 200:
+                        pdf_content = await response.read()
+                        gc.collect()
+                        return pdf_content
+
+                    if response.status == 502 and attempt < max_retries:
+                        wait_time = (2 ** attempt) * 0.5
+                        await asyncio.sleep(wait_time)
+                        continue
+                    
+                    error_text = await response.text()
+                    raise Exception(  # pylint: disable=broad-exception-raised
+                        f'Gotenberg conversion failed with status {response.status}: '
+                        f'{error_text}'
+                    )
+            except aiohttp.ClientError as e:
+                if attempt < max_retries:
+                    wait_time = (2 ** attempt) * 0.5
+                    await asyncio.sleep(wait_time)
+                    continue
+                raise Exception(f"Gotenberg connection failed: {str(e)}")  # pylint: disable=broad-exception-raised
 
     @staticmethod
     async def render_tasks_parallel_async(
         tasks: List[Tuple[int, str]],
         base_url: str,
+        max_concurrent: int = 5,
     ) -> List[bytes]:
         """Render HTML tasks in parallel using shared session for better performance."""
         results: List[Tuple[int, bytes]] = []
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def bounded_task(oid: int, html_out: str, session: aiohttp.ClientSession):
+            async with semaphore:
+                return (
+                    oid,
+                    await GotenbergService._render_pdf_bytes_worker_gotenberg_with_session(
+                        (html_out, base_url), session
+                    ),
+                )
 
         async with aiohttp.ClientSession() as session:
             async_tasks = []
-            order_ids = []
             for oid, html_out in tasks:
-                task = GotenbergService._render_pdf_bytes_worker_gotenberg_with_session(
-                    (html_out, base_url), session
-                )
+                task = bounded_task(oid, html_out, session)
                 async_tasks.append(task)
-                order_ids.append(oid)
 
-            pdf_contents = await asyncio.gather(*async_tasks)
+            completed_tasks = await asyncio.gather(*async_tasks)
 
-            for oid, pdf_content in zip(order_ids, pdf_contents):
+            for oid, pdf_content in completed_tasks:
                 results.append((oid, pdf_content))
 
         return [pdf for _, pdf in sorted(results, key=lambda x: x[0])]

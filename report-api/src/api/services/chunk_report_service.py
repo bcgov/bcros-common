@@ -154,8 +154,24 @@ class ChunkReportService:  # pylint:disable=too-few-public-methods
         base_url = current_app.root_path
 
         # First pass: render all chunks to PDF bytes in parallel (no footers)
+
+        task_count = len(tasks)
+        if task_count <= 10:
+            max_concurrent = min(task_count, 2)
+        elif task_count <= 50:
+            max_concurrent = min(task_count, 10)
+        else:
+            max_concurrent = min(task_count, 15)
+
+
+        current_app.logger.info(
+            f'Using {max_concurrent} concurrent Gotenberg requests for {task_count} chunks'
+        )
+
         pdf_chunks = asyncio.run(
-            GotenbergService.render_tasks_parallel_async(tasks, base_url)
+            GotenbergService.render_tasks_parallel_async(
+                tasks, base_url, max_concurrent
+            )
         )
 
         for pdf_content in pdf_chunks:
