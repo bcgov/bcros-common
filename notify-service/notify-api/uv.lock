@@ -369,7 +369,7 @@ wheels = [
 [[package]]
 name = "cloud-sql-connector"
 version = "0.2.1"
-source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fcloud-sql-connector&branch=main#eb0b39fc646408d6d2568a20c9c7decc73c1d1ea" }
+source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fcloud-sql-connector&branch=main#9a68de0e56c7652cafa29cbff37dc39d85f220c5" }
 dependencies = [
     { name = "cloud-sql-python-connector" },
     { name = "pg8000" },
@@ -767,7 +767,7 @@ wheels = [
 [[package]]
 name = "gcp-queue"
 version = "0.3.0"
-source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fgcp-queue&branch=main#eb0b39fc646408d6d2568a20c9c7decc73c1d1ea" }
+source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fgcp-queue&branch=main#9a68de0e56c7652cafa29cbff37dc39d85f220c5" }
 dependencies = [
     { name = "flask" },
     { name = "google-auth" },
@@ -2029,7 +2029,7 @@ wheels = [
 [[package]]
 name = "structured-logging"
 version = "0.4.0"
-source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fstructured-logging&branch=main#eb0b39fc646408d6d2568a20c9c7decc73c1d1ea" }
+source = { git = "https://github.com/bcgov/sbc-connect-common.git?subdirectory=python%2Fstructured-logging&branch=main#9a68de0e56c7652cafa29cbff37dc39d85f220c5" }
 dependencies = [
     { name = "flask" },
     { name = "structlog" },
