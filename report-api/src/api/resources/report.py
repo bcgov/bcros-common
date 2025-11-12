@@ -18,7 +18,7 @@ import json
 import re
 from http import HTTPStatus
 
-from flask import abort, request, send_file
+from flask import Response, abort, request, send_file, stream_with_context
 from flask_restx import Namespace, Resource
 from jinja2 import TemplateNotFound
 
@@ -59,7 +59,10 @@ def _generate_csv_report(request_json):
     """Generate CSV report from request data."""
     report_name = _sanitize_filename(request_json.get('reportName'))
     file_name = f'{report_name}.csv'
-    report = CsvService.create_report(request_json.get('templateVars'))
+    template_vars = request_json.get('templateVars', {})
+    if not template_vars.get('columns'):
+        return None, file_name
+    report = CsvService.create_report(template_vars)
     return report, file_name
 
 
@@ -94,12 +97,15 @@ def _create_response(report, file_name, content_type):
         abort(HTTPStatus.BAD_REQUEST, 'Report cannot be generated')
 
     if content_type == 'text/csv':
-        with open(report.name, 'rb') as f:
-            csv_bytes = f.read()
-        stream = io.BytesIO(csv_bytes)
-    else:
-        stream = io.BytesIO(report)
+        return Response(
+            stream_with_context(report),
+            mimetype=content_type,
+            headers={
+                'Content-Disposition': f'attachment; filename="{file_name}"'
+            }
+        )
 
+    stream = io.BytesIO(report)
     return send_file(
         stream,
         mimetype=content_type,
