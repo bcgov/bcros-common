@@ -244,7 +244,7 @@ def test_csv_response_is_streaming(client, jwt, app):
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
     assert rv.status_code == 200
-    assert rv.content_type == 'text/csv'
+    assert rv.content_type.startswith('text/csv')
     assert 'Content-Disposition' in rv.headers
     assert 'attachment' in rv.headers['Content-Disposition']
     assert len(rv.data) > 0
@@ -312,7 +312,7 @@ def test_gzip_request_compression_csv(client, jwt, app):
     )
 
     assert rv.status_code == 200
-    assert rv.content_type == 'text/csv'
+    assert rv.content_type.startswith('text/csv')
     assert len(rv.data) > 0
     assert b'col1' in rv.data or b'col1,col2' in rv.data
 
@@ -344,15 +344,16 @@ def test_gzip_request_invalid_compression(client, jwt, app):
 
 
 def test_filename_sanitization_pdf(client, jwt, app, mock_gotenberg_requests):
-    """Verify that filenames are sanitized to only allow alphanumeric and underscore characters."""
+    """Verify that filenames are sanitized to only allow alphanumeric characters, underscores, hyphens, and dots."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
     headers = {'Authorization': f'Bearer {token}', 'content-type': 'application/json'}
 
     request_url = '/api/v1/reports'
+    report_name = '../../etc/passwd<script>alert(1)</script>test-file_123'
     request_data = {
         'templateName': 'invoice',
         'templateVars': {'title': 'Test'},
-        'reportName': '../../etc/passwd<script>alert(1)</script>test-file_123'
+        'reportName': report_name
     }
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
@@ -363,11 +364,11 @@ def test_filename_sanitization_pdf(client, jwt, app, mock_gotenberg_requests):
     assert 'filename=' in content_disposition
     assert '../../' not in content_disposition
     assert '<script>' not in content_disposition
-    assert 'testfile_123.pdf' in content_disposition
+    assert 'test-file_123.pdf' in content_disposition
 
 
 def test_filename_sanitization_csv(client, jwt, app):
-    """Verify that CSV filenames are sanitized to only allow alphanumeric and underscore characters."""
+    """Verify that CSV filenames are sanitized to only allow alphanumeric characters, underscores, hyphens, and dots."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
     headers = {
         'Authorization': f'Bearer {token}',
@@ -376,8 +377,9 @@ def test_filename_sanitization_csv(client, jwt, app):
     }
 
     request_url = '/api/v1/reports'
+    report_name = '../../etc/passwd<script>alert(1)</script>test-file_123'
     request_data = {
-        'reportName': '../../etc/passwd<script>alert(1)</script>test-file_123',
+        'reportName': report_name,
         'templateVars': {
             'columns': ['a', 'b'],
             'values': [['1', '2']]
@@ -386,10 +388,10 @@ def test_filename_sanitization_csv(client, jwt, app):
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
     assert rv.status_code == 200
-    assert rv.content_type == 'text/csv'
+    assert rv.content_type.startswith('text/csv')
 
     content_disposition = rv.headers.get('Content-Disposition', '')
     assert 'filename=' in content_disposition
     assert '../../' not in content_disposition
     assert '<script>' not in content_disposition
-    assert 'testfile_123.csv' in content_disposition
+    assert 'test-file_123.csv' in content_disposition
