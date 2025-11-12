@@ -221,8 +221,7 @@ def test_response_is_streaming(client, jwt, app, mock_gotenberg_requests):
     assert rv.content_type == 'application/pdf'
     assert 'Content-Disposition' in rv.headers
     assert 'attachment' in rv.headers['Content-Disposition']
-    assert 'Transfer-Encoding' in rv.headers
-    assert rv.headers['Transfer-Encoding'].lower() == 'chunked'
+    assert 'Content-Length' not in rv.headers
     assert len(rv.data) > 0
     assert rv.data.startswith(b'%PDF')
 
@@ -249,8 +248,7 @@ def test_csv_response_is_streaming(client, jwt, app):
     assert rv.content_type.startswith('text/csv')
     assert 'Content-Disposition' in rv.headers
     assert 'attachment' in rv.headers['Content-Disposition']
-    assert 'Transfer-Encoding' in rv.headers
-    assert rv.headers['Transfer-Encoding'].lower() == 'chunked'
+    assert 'Content-Length' not in rv.headers
     assert len(rv.data) > 0
     assert b'a,b,c' in rv.data or b'a,b,c\r\n' in rv.data
 
