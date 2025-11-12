@@ -221,6 +221,8 @@ def test_response_is_streaming(client, jwt, app, mock_gotenberg_requests):
     assert rv.content_type == 'application/pdf'
     assert 'Content-Disposition' in rv.headers
     assert 'attachment' in rv.headers['Content-Disposition']
+    assert 'Transfer-Encoding' in rv.headers
+    assert rv.headers['Transfer-Encoding'].lower() == 'chunked'
     assert len(rv.data) > 0
     assert rv.data.startswith(b'%PDF')
 
@@ -247,6 +249,8 @@ def test_csv_response_is_streaming(client, jwt, app):
     assert rv.content_type.startswith('text/csv')
     assert 'Content-Disposition' in rv.headers
     assert 'attachment' in rv.headers['Content-Disposition']
+    assert 'Transfer-Encoding' in rv.headers
+    assert rv.headers['Transfer-Encoding'].lower() == 'chunked'
     assert len(rv.data) > 0
     assert b'a,b,c' in rv.data or b'a,b,c\r\n' in rv.data
 
@@ -343,55 +347,40 @@ def test_gzip_request_invalid_compression(client, jwt, app):
     assert 'Failed to decompress' in response_data['message']
 
 
-def test_filename_sanitization_pdf(client, jwt, app, mock_gotenberg_requests):
-    """Verify that filenames are sanitized to only allow alphanumeric characters, underscores, hyphens, and dots."""
+def test_template_name_sanitization(client, jwt, app, mock_gotenberg_requests):
+    """Verify that template names are sanitized to prevent path traversal attacks."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
     headers = {'Authorization': f'Bearer {token}', 'content-type': 'application/json'}
 
     request_url = '/api/v1/reports'
-    report_name = '../../etc/passwd<script>alert(1)</script>test-file_123'
+
     request_data = {
-        'templateName': 'invoice',
+        'templateName': '../../etc/passwd',
         'templateVars': {'title': 'Test'},
-        'reportName': report_name
+        'reportName': 'test'
     }
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
-    assert rv.status_code == 200
-    assert rv.content_type == 'application/pdf'
-
-    content_disposition = rv.headers.get('Content-Disposition', '')
-    assert 'filename=' in content_disposition
-    assert '../../' not in content_disposition
-    assert '<script>' not in content_disposition
-    assert 'test-file_123.pdf' in content_disposition
+    assert rv.status_code == 400
+    response_data = rv.get_json()
+    assert response_data is not None
+    assert 'message' in response_data
+    message_lower = response_data['message'].lower()
+    assert 'invalid path characters' in message_lower or 'path traversal' in message_lower
 
 
-def test_filename_sanitization_csv(client, jwt, app):
-    """Verify that CSV filenames are sanitized to only allow alphanumeric characters, underscores, hyphens, and dots."""
+def test_template_name_sanitization_invalid_chars(client, jwt, app, mock_gotenberg_requests):
+    """Verify that template names with invalid characters are sanitized."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'content-type': 'application/json',
-        'Accept': 'text/csv'
-    }
+    headers = {'Authorization': f'Bearer {token}', 'content-type': 'application/json'}
 
     request_url = '/api/v1/reports'
-    report_name = '../../etc/passwd<script>alert(1)</script>test-file_123'
+
     request_data = {
-        'reportName': report_name,
-        'templateVars': {
-            'columns': ['a', 'b'],
-            'values': [['1', '2']]
-        }
+        'templateName': 'invoice<script>alert(1)</script>',
+        'templateVars': {'title': 'Test'},
+        'reportName': 'test'
     }
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
-    assert rv.status_code == 200
-    assert rv.content_type.startswith('text/csv')
-
-    content_disposition = rv.headers.get('Content-Disposition', '')
-    assert 'filename=' in content_disposition
-    assert '../../' not in content_disposition
-    assert '<script>' not in content_disposition
-    assert 'test-file_123.csv' in content_disposition
+    assert rv.status_code == 404
