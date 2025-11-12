@@ -241,7 +241,7 @@ def test_csv_response_is_streaming(client, jwt, app):
             'values': [['1', '2', '3'], ['4', '5', '6']]
         }
     }
-    
+
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
     assert rv.status_code == 200
     assert rv.content_type == 'text/csv'
@@ -254,7 +254,7 @@ def test_csv_response_is_streaming(client, jwt, app):
 def test_gzip_request_compression(client, jwt, app, mock_gotenberg_requests):
     """Verify that GZIP compressed request body is properly decompressed and processed."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
-    
+
     request_url = '/api/v1/reports'
     request_data = {
         'templateName': 'invoice',
@@ -264,19 +264,19 @@ def test_gzip_request_compression(client, jwt, app, mock_gotenberg_requests):
 
     json_data = json.dumps(request_data).encode('utf-8')
     compressed_data = gzip.compress(json_data)
-    
+
     headers = {
         'Authorization': f'Bearer {token}',
         'content-type': 'application/json',
         'Content-Encoding': 'gzip'
     }
-    
+
     rv = client.post(
         request_url,
         data=compressed_data,
         headers=headers
     )
-    
+
     assert rv.status_code == 200
     assert rv.content_type == 'application/pdf'
     assert len(rv.data) > 0
@@ -285,7 +285,7 @@ def test_gzip_request_compression(client, jwt, app, mock_gotenberg_requests):
 def test_gzip_request_compression_csv(client, jwt, app):
     """Verify that GZIP compressed request body works for CSV reports."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
-    
+
     request_url = '/api/v1/reports'
     request_data = {
         'reportName': 'gzip_csv_test',
@@ -297,20 +297,20 @@ def test_gzip_request_compression_csv(client, jwt, app):
 
     json_data = json.dumps(request_data).encode('utf-8')
     compressed_data = gzip.compress(json_data)
-    
+
     headers = {
         'Authorization': f'Bearer {token}',
         'content-type': 'application/json',
         'Content-Encoding': 'gzip',
         'Accept': 'text/csv'
     }
-    
+
     rv = client.post(
         request_url,
         data=compressed_data,
         headers=headers
     )
-    
+
     assert rv.status_code == 200
     assert rv.content_type == 'text/csv'
     assert len(rv.data) > 0
@@ -320,22 +320,22 @@ def test_gzip_request_compression_csv(client, jwt, app):
 def test_gzip_request_invalid_compression(client, jwt, app):
     """Verify that invalid GZIP data returns appropriate error."""
     token = jwt.create_jwt(get_claims(app_request=app), token_header)
-    
+
     request_url = '/api/v1/reports'
     invalid_compressed_data = b'not valid gzip data'
-    
+
     headers = {
         'Authorization': f'Bearer {token}',
         'content-type': 'application/json',
         'Content-Encoding': 'gzip'
     }
-    
+
     rv = client.post(
         request_url,
         data=invalid_compressed_data,
         headers=headers
     )
-    
+
     assert rv.status_code == 400
     response_data = rv.get_json()
     assert response_data is not None

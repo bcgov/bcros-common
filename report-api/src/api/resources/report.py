@@ -15,7 +15,6 @@
 import gzip
 import io
 import json
-import re
 from http import HTTPStatus
 
 from flask import Response, abort, request, send_file, stream_with_context
@@ -27,19 +26,6 @@ from api.utils.auth import jwt as _jwt
 
 
 API = Namespace('Reports', description='Service - Reports')
-
-
-def _sanitize_filename(filename):
-    """Sanitize filename to only allow alphanumeric characters and underscores."""
-    if not filename:
-        return 'report'
-
-    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', filename)
-
-    if not sanitized:
-        return 'report'
-
-    return sanitized
 
 
 def _parse_request_json():
@@ -57,7 +43,7 @@ def _parse_request_json():
 
 def _generate_csv_report(request_json):
     """Generate CSV report from request data."""
-    report_name = _sanitize_filename(request_json.get('reportName'))
+    report_name = request_json.get('reportName', 'report')
     file_name = f'{report_name}.csv'
     template_vars = request_json.get('templateVars', {})
     if not template_vars.get('columns'):
@@ -68,7 +54,7 @@ def _generate_csv_report(request_json):
 
 def _generate_pdf_report(request_json):
     """Generate PDF report from request data."""
-    report_name = _sanitize_filename(request_json.get('reportName'))
+    report_name = request_json.get('reportName', 'report')
     file_name = f'{report_name}.pdf'
     template_vars = request_json['templateVars']
     populate_page_number = bool(request_json.get('populatePageNumber', None))
@@ -81,6 +67,8 @@ def _generate_pdf_report(request_json):
             )
         except TemplateNotFound:
             abort(HTTPStatus.NOT_FOUND, 'Template not found')
+        except ValueError as e:
+            abort(HTTPStatus.BAD_REQUEST, str(e))
     elif 'template' in request_json:
         report = ReportService.create_report_from_template(
             request_json['template'], template_vars, populate_page_number
@@ -97,11 +85,12 @@ def _create_response(report, file_name, content_type):
         abort(HTTPStatus.BAD_REQUEST, 'Report cannot be generated')
 
     if content_type == 'text/csv':
+        content_disposition = f'attachment; filename="{file_name}"'  # noqa: E702
         return Response(
             stream_with_context(report),
             mimetype=content_type,
             headers={
-                'Content-Disposition': f'attachment; filename="{file_name}"'
+                'Content-Disposition': content_disposition
             }
         )
 
