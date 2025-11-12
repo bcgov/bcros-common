@@ -383,4 +383,4 @@ def test_template_name_sanitization_invalid_chars(client, jwt, app, mock_gotenbe
     }
 
     rv = client.post(request_url, data=json.dumps(request_data), headers=headers)
-    assert rv.status_code == 404
+    assert rv.status_code == 400
