@@ -13,12 +13,11 @@
 # limitations under the License.
 """Endpoints to check and manage payments."""
 import gzip
-import io
 import json
 import re
 from http import HTTPStatus
 
-from flask import Response, abort, request, send_file, stream_with_context
+from flask import Response, abort, request, stream_with_context
 from flask_restx import Namespace, Resource
 from jinja2 import TemplateNotFound
 
@@ -98,22 +97,15 @@ def _create_response(report, file_name, content_type):
     if report is None:
         abort(HTTPStatus.BAD_REQUEST, 'Report cannot be generated')
 
-    if content_type == 'text/csv':
-        content_disposition = f'attachment; filename="{file_name}"'  # noqa: E702
-        return Response(
-            stream_with_context(report),
-            mimetype=content_type,
-            headers={
-                'Content-Disposition': content_disposition
-            }
-        )
+    content_disposition = f'attachment; filename="{file_name}"'  # noqa: E702
+    response_data = stream_with_context(report) if content_type == 'text/csv' else report
 
-    stream = io.BytesIO(report)
-    return send_file(
-        stream,
+    return Response(
+        response_data,
         mimetype=content_type,
-        as_attachment=True,
-        download_name=file_name
+        headers={
+            'Content-Disposition': content_disposition
+        }
     )
 
 
