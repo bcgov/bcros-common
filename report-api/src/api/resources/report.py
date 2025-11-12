@@ -15,6 +15,7 @@
 import gzip
 import io
 import json
+import re
 from http import HTTPStatus
 
 from flask import abort, request, send_file
@@ -26,6 +27,19 @@ from api.utils.auth import jwt as _jwt
 
 
 API = Namespace('Reports', description='Service - Reports')
+
+
+def _sanitize_filename(filename):
+    """Sanitize filename to only allow alphanumeric characters and underscores."""
+    if not filename:
+        return 'report'
+
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', filename)
+
+    if not sanitized:
+        return 'report'
+
+    return sanitized
 
 
 def _parse_request_json():
@@ -43,14 +57,16 @@ def _parse_request_json():
 
 def _generate_csv_report(request_json):
     """Generate CSV report from request data."""
-    file_name = f"{request_json.get('reportName')}.csv"
+    report_name = _sanitize_filename(request_json.get('reportName'))
+    file_name = f'{report_name}.csv'
     report = CsvService.create_report(request_json.get('templateVars'))
     return report, file_name
 
 
 def _generate_pdf_report(request_json):
     """Generate PDF report from request data."""
-    file_name = f"{request_json.get('reportName')}.pdf"
+    report_name = _sanitize_filename(request_json.get('reportName'))
+    file_name = f'{report_name}.pdf'
     template_vars = request_json['templateVars']
     populate_page_number = bool(request_json.get('populatePageNumber', None))
 
