@@ -84,7 +84,13 @@ def _create_response(report, file_name, content_type):
         abort(HTTPStatus.BAD_REQUEST, 'Report cannot be generated')
 
     content_disposition = f'attachment; filename="{file_name}"'  # noqa: E702
-    response_data = stream_with_context(report) if content_type == 'text/csv' else report
+
+    if content_type == 'text/csv':
+        response_data = stream_with_context(report)
+    else:
+        def pdf_generator():
+            yield report
+        response_data = stream_with_context(pdf_generator())
 
     return Response(
         response_data,
