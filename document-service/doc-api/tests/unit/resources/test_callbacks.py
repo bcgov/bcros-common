@@ -47,6 +47,14 @@ TEST_DOC_REC_INVALID = {
     "consumerDocumentId": "99990950",
     "consumerIdentifier": "108924",
 }
+TEST_DOC_REC_BUSINESS_API = {
+    "accountId": "business-api",
+    "consumerDocumentId": "99980991",
+    "consumerIdentifier": "BC1108924",
+    "consumerFilingType": "annualReport",
+    "consumerReferenceId": "1629808",
+    "documentClass": "CORP"
+}
 
 
 # testdata pattern is ({description}, {payload_json}, {has_key}, {author}, {status}, {ref_id})
@@ -56,6 +64,7 @@ TEST_CREATE_DATA = [
     ("Invalid bad api key", TEST_DOC_REC_LEGACY, False, "John Smith", HTTPStatus.UNAUTHORIZED, None),
     ("Valid legacy", TEST_DOC_REC_LEGACY, True, "John Smith", HTTPStatus.CREATED, None),
     ("Valid modern", TEST_DOC_REC_MODERN, True, "John Smith", HTTPStatus.CREATED, "9014005"),
+    ("Valid business api", TEST_DOC_REC_BUSINESS_API, True, None, HTTPStatus.CREATED, None),
 ]
 
 
