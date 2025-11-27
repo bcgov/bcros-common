@@ -57,9 +57,9 @@ def post_document_records():
         extra_validation_msg = resource_utils.validate_request(info)
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
-        doc: Document = Document.find_by_document_id(request_json.get("consumerDocumentId"))
-        if doc:
-            response_json = resource_utils.save_callback_update_rec(info, doc)
+        docs = Document.find_by_document_id(request_json.get("consumerDocumentId"))
+        if docs:  # For this scenario the document ID should always only have 1 document.
+            response_json = resource_utils.save_callback_update_rec(info, docs[0])
             return jsonify(response_json), HTTPStatus.OK
         else:
             response_json = resource_utils.save_callback_create_rec(info)
