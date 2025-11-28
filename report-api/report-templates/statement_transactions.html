@@ -161,7 +161,7 @@
                     </div>
                 </td>
             </tr>
-            {% if statementSummary.cancelledTransactions %}
+            {% if statementSummary.cancelledTransactions and statementSummary.cancelledTransactions != '0.00' %}
             <tr>
                 <td colspan="2">
                     <div class="total-elements">
