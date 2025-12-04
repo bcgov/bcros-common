@@ -1,9 +1,188 @@
 <div>
+    <table class="main-table statement-totals">
+        {% if payment_method in ['EFT', 'PAD'] %}
+            <tr>
+              <td colspan="2">
+                  <div class="section-title mb-0">Previous Statement</div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                  <div class="total-elements-no-border">
+                      Previous Balance:
+                      <span class="total-elements-price">${{ statementSummary.lastStatementTotal if statementSummary.lastStatementTotal else '0.00' }}</span>
+                  </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                  <div class="total-elements-no-border statement-subline">
+                      Payments received ({{statementSummary.latestStatementPaymentDate}})
+                      <span class="total-elements-price">{{ '$0.00' if not statementSummary or statementSummary.lastStatementPaidAmount == '0.00' else '-$' + data.paid }}</span>
+                  </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <div class="total-elements-bottom-border font-bold">
+                  Balance Forward (From {{ statement.fromDate }}):
+                  <span class="total-elements-price font-bold">${{ statementSummary.balanceForward }}</span>
+                </div>
+              </td>
+            </tr>
+        {% endif %}
+        <tr>
+            <td colspan="2">
+                <div class="section-title mb-0">Current Statement</div>
+            </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+              <div class="total-elements-no-border">
+                  Fees:
+                  <span class="total-elements-price">${{ data.fees if data else '0.0' }}</span>
+              </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+              <div class="total-elements-no-border">
+                  Service Fees:
+                  <span class="total-elements-price">${{ data.serviceFees if data else '0.0' }}</span>
+              </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+              <div class="total-elements-no-border">
+                  GST:
+                  <span class="total-elements-price">${{ data.gst if data else '0.0' }}</span>
+              </div>
+          </td>
+        </tr>
+        {% if data and data.creditsApplied and data.creditsApplied != "0.00" %}
+        <tr>
+          <td colspan="2">
+              <div class="total-elements-no-border">
+                Credits applied (from {{statement.duration}}):
+                  <span class="total-elements-price">{{ '$0.00' if not data or data.creditsApplied == '0.00' else '-$' + data.creditsApplied }}</span>
+              </div>
+          </td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td colspan="2">
+              <div class="total-elements-no-border font-bold">
+                  Current Statement Total:
+                  <span class="total-elements-price font-bold">${{ data.totals if data else '0.0' }}</span>
+              </div>
+          </td>
+        </tr>
+        {% if payment_method == 'PAD' %}
+            <tr>
+              <td colspan="2">
+                <div class="total-elements-bottom-border font-bold">
+                  Pre-Authorized Debit Amount Processed:
+                  <span class="total-elements-price font-bold"> {{ '$0.00' if not data or data.paid == '0.00' else '-$' + data.paid }}</span>
+                </div>
+              </td>
+            </tr>
+        {% endif %}
+        {% if payment_method == 'EFT' %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements">
+                        Last Statement Total:
+                        <span class="total-elements-price">${{ statementSummary.lastStatementTotal }}</span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements">
+                        Payment Received for Last Statement:
+                        <span class="total-elements-price">-${{ statementSummary.lastStatementPaidAmount }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% if statementSummary.cancelledTransactions and statementSummary.cancelledTransactions != '0.00' %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements">
+                        Cancelled Transactions:
+                        <span class="total-elements-price">-${{ statementSummary.cancelledTransactions }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+
+            {% if statement.isInterimStatement %}
+                <tr>
+                    <td colspan="2">
+                        <div class="total-elements font-bold" style="border-bottom: none;">
+                            Total Amount Paid:
+                            <span class="total-elements-price font-bold">${{ data.paid }}</span>
+                        </div>
+                        {%  if statementSummary.latestStatementPaymentDate %}
+                        <div class="total-elements font-14"  style="border-bottom: none;">Paid on {{ statementSummary.latestStatementPaymentDate }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endif %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements font-bold" style="border-bottom: none;">
+                        Total Amount Due:
+                        <span class="total-elements-price font-bold">${{ data.due if data else '0.0'}}</span>
+                    </div>
+                    {% if not statement.isInterimStatement %}
+                        <div class="total-elements font-14"  style="border-bottom: none;">Payment Due Date: {{ statementSummary.dueDate }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}
+            {% if payment_method == 'DIRECT_PAY' or payment_method == 'CC' or payment_method == 'EFT' or payment_method == 'ONLINE_BANKING' %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements" style="border-bottom: none;">
+                        Total Amount Due:
+                        <span class="total-elements-price">${{ data.due if data else '0.0' }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        {% endif %}
+        {% if payment_method == 'PAD' %}
+            {% if data.due %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements font-bold" style="border-bottom: none;">
+                        Total Amount Due:
+                        <span class="total-elements-price font-bold">${{ data.due }}</span>
+                    </div>
+                    <div class="total-elements-last-row">
+                      Will be withdrawn within 1-3 business days after the transaction date.
+                  </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% if statementSummary.lastPADStatementPaidAmount %}
+            <tr>
+                <td colspan="2">
+                    <div class="total-elements">
+                        Payment Received for Pending Transactions on Last Statement:
+                        <span class="total-elements-price">-${{ '%.2f' % statementSummary.lastPADStatementPaidAmount }}</span>
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+        {% endif %}
+    </table>
     <table>
         <tr>
             <td colspan="2">
                 <div class="section-title no-border">
-                    Transactions
+                    Transactions from {{ statement.duration }}
                 </div>
             </td>
         </tr>
@@ -30,199 +209,111 @@
             <tr>
                 <td class="product-purchased">
                     {% for product in row.products %}
-                    <div class="font-bold">{{ product }}</div>
+                        <div class="font-bold">{{ product }}</div>
                     {% endfor %}
                     {% if row.details %}
-                    <div class="transaction-details">
-                        {% for detail in row.details %}
-                        <div>{{ detail }}</div>
+                      <div class="transaction-details">
+                          {% for detail in row.details %}
+                              <div>{{ detail }}</div>
+                          {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% if row.statusCode in ['Refund complete', 'PARTIALLY_REFUNDED'] %}
+                        <div class="font-bold">
+                            {% if row.statusCode == 'Refund complete' %}
+                                Refunds
+                            {% elif row.statusCode == 'PARTIALLY_REFUNDED' %}
+                                Partially Refunds
+                            {% endif %}
+                        </div>
+                        {% for product in row.products %}
+                            <div>For: {{ product }}</div>
                         {% endfor %}
-                    </div>
+                        <div>Refunded Transaction ID: {{ row.id }}</div>
                     {% endif %}
                 </td>
                 <td>{{ row.folio }}</td>
-                <td>{{ row.created_on }}</td>
+                <td>{{ row.createdOn }}</td>
                 <td>${{ row.fee }}</td>
-                <td>${{ row.service_fee }}</td>
+                <td>${{ row.serviceFee }}</td>
                 <td>${{ row.gst }}</td>
                 <td>
                     ${{ row.total }}
-                    {% if row.status_code == 'APPROVED' %}
+                    {% if row.statusCode == 'APPROVED' %}
                     <br>(Pending)
                     {% endif %}
                 </td>
             </tr>
-            {% endfor %}
-    </table>
-    {% endif %}
-    <table class="main-table">
-        <tr>
-            <td colspan="2">
-                <div class="section-title mb-0">
-                    {% if payment_method == 'PAD' %}
-                    Pre-Authorized Debit Totals
-                    {% elif payment_method == 'ONLINE_BANKING' %}
-                    Online Banking Totals
-                    {% elif payment_method == 'CC' or pm == 'DIRECT_PAY' %}
-                    Credit Card Totals
-                    {% elif payment_method == 'DRAWDOWN' %}
-                    BC OnLine Totals
-                    {% elif payment_method == 'EJV' %}
-                    Electronic Journal Voucher Totals
-                    {% elif payment_method == 'EFT' %}
-                    Electronic Funds Transfer Totals
+            {% if row.appliedCredits %}
+                <tr class="no-top-border">
+                  <td>
+                      <div>Account Credit Applied</div>
+                  </td>
+                  <td></td>
+                  <td></td>
+                  <td>
+                    {% if row.isFullAppliedCredits %}
+                        <div>{{ '$0.00' if row.fee == '0.00' else '-$' + row.fee }}</div>
                     {% else %}
-                    Totals
+                      <div>{{ '$0.00' if row.appliedCreditsAmount == '0.00' else '-$' + row.appliedCreditsAmount }}</div>
                     {% endif %}
-                </div>
-            </td>
-        </tr>
-        <tr>
-          <td colspan="2">
-              <div class="total-elements_no_border">
-                  Fees:
-                  <span class="total-elements-price">${{ '%.2f' % (data.fees_total if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2">
-              <div class="total-elements_no_border">
-                  Service Fees:
-                  <span class="total-elements-price">${{ '%.2f' % (data.service_fees_total if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="2">
-              <div class="total-elements_no_border">
-                  GST:
-                  <span class="total-elements-price">${{ '%.2f' % (data.gst_total if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        {% if data and data.refunds_total %}
-        <tr>
-          <td colspan="2">
-              <div class="total-elements_no_border">
-                  Refunds Received:
-                  <span class="total-elements-price">${{ '%.2f' % (data.refunds_total if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        {% endif %}
-        {% if data and data.credits_total %}
-        <tr>
-          <td colspan="2">
-              <div class="total-elements_no_border">
-                  Credits Received:
-                  <span class="total-elements-price">${{ '%.2f' % (data.credits_total if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        {% endif %}
-        <tr>
-          <td colspan="2">
-              <div class="total-elements font-bold">
-                  Total:
-                  <span class="total-elements-price font-bold">${{ '%.2f' % (data.totals_summary if data else 0.0) }}</span>
-              </div>
-          </td>
-        </tr>
-        {% if payment_method == 'EFT' %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements">
-                        Last Statement Total:
-                        <span class="total-elements-price">${{ statementSummary.lastStatementTotal }}</span>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements">
-                        Payment Received for Last Statement:
-                        <span class="total-elements-price">-${{ statementSummary.lastStatementPaidAmount }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% if statementSummary.cancelledTransactions %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements">
-                        Cancelled Transactions:
-                        <span class="total-elements-price">-${{ statementSummary.cancelledTransactions }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
-
-            {% if statement.is_interim_statement %}
-                <tr>
-                    <td colspan="2">
-                        <div class="total-elements font-bold" style="border-bottom: none;">
-                            Total Amount Paid:
-                            <span class="total-elements-price font-bold">${{ data.paid_summary }}</span>
-                        </div>
-                        {%  if statementSummary.latestStatementPaymentDate %}
-                        <div class="total-elements font-14"  style="border-bottom: none;">Paid on {{ statementSummary.latestStatementPaymentDate }}</div>
-                        {% endif %}
-                    </td>
+                  </td>
+                  <td>
+                      {% if row.isFullAppliedCredits %}
+                          <div>{{ '$0.00' if row.serviceFee == '0.00' else '-$' + row.serviceFee }}</div>
+                      {% endif %}
+                  </td>
+                  <td>
+                      {% if row.isFullAppliedCredits %}
+                          <div>{{ '$0.00' if row.gst == '0.00' else '-$' + row.gst }}</div>
+                      {% endif %}
+                  </td>
+                  <td>
+                      <div>{{ '$0.00' if row.appliedCreditsAmount == '0.00' else '-$' + row.appliedCreditsAmount }}</div>
+                  </td>
                 </tr>
             {% endif %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements font-bold" style="border-bottom: none;">
-                        Total Amount Owing:
-                        <span class="total-elements-price font-bold">${{ '%.2f' % data.due_summary }}</span>
-                    </div>
-                    {% if not statement.is_interim_statement %}
-                        <div class="total-elements font-14"  style="border-bottom: none;">Payment Due Date: {{ statementSummary.dueDate }}</div>
-                    {% endif %}
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements">
-                        Amount Paid:
-                        <span class="total-elements-price font-bold">${{ '%.2f' % (data.paid_summary if data else 0.0) }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% if payment_method == 'DIRECT_PAY' or payment_method == 'CC' or payment_method == 'EFT' or payment_method == 'ONLINE_BANKING' %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements" style="border-bottom: none;">
-                        Total Amount Due:
-                        <span class="total-elements-price">${{ '%.2f' % (data.due_summary if data else 0.0) }}</span>
-                    </div>
-                </td>
-            </tr>
+            {% set status_text = {
+              'CANCELLED': 'Service Cancelled',
+              'REFUNDED': 'Refunded',
+              'CREDITED': 'Credited',
+              'PARTIALLY_REFUNDED': 'Partially Refunded',
+              'PARTIALLY_CREDITED': 'Partially Credited'
+            } %}          
+            {% if row.statusCode in status_text %}
+                <tr>
+                    <td class="product-purchased">
+                        {% for product in row.products %}
+                            <div class="font-bold">{{ product }} ({{ status_text[row.statusCode] }})</div>
+                        {% endfor %}
+                        {% if row.details %}
+                          <div class="transaction-details">
+                              {% for detail in row.details %}
+                                  <div>{{ detail }}</div>
+                              {% endfor %}
+                          </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.folio }}</td>
+                    <td>{{ row.refundDate }}</td>
+                    <td>{{ '$0.00' if row.fee == '0.00' else '-$' + row.fee }}</td>
+                    <td>{{ '$0.00' if row.serviceFee == '0.00' else '-$' + row.serviceFee }}</td>
+                    <td>{{ '$0.00' if row.gst == '0.00' else '-$' + row.gst }}</td>
+                    <td>{{ '$0.00' if row.total == '0.00' else '-$' + row.total }}</td>
+                </tr>
             {% endif %}
-        {% endif %}
-        {% if payment_method == 'PAD' %}
-            {% if data.due_summary %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements font-bold" style="border-bottom: none;">
-                        Total Amount Owing:
-                        <span class="total-elements-price font-bold">${{ '%.2f' % data.due_summary }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
-            {% if statementSummary.lastPADStatementPaidAmount %}
-            <tr>
-                <td colspan="2">
-                    <div class="total-elements">
-                        Payment Received for Pending Transactions on Last Statement:
-                        <span class="total-elements-price">-${{ '%.2f' % statementSummary.lastPADStatementPaidAmount }}</span>
-                    </div>
-                </td>
-            </tr>
-            {% endif %}
-        {% endif %}
+        {% endfor %}
+    </table>
+    <tr>
+      <td colspan="2">
+          <div class="transaction-summary-row font-bold">
+              Current Statement Total:
+              <span class="total-elements-price font-bold">${{ data.totals if data else '0.0' }}</span>
+          </div>
+      </td>
+    </tr>
+    {% endif %}
+    <table class="main-table">
         {% if include_service_provided and payment_method == 'PAD' %}
         <tr>
             <td colspan="2">
