@@ -244,35 +244,6 @@
                     {% endif %}
                 </td>
             </tr>
-            {% set status_text = {
-              'CANCELLED': 'Service Cancelled',
-              'REFUNDED': 'Refunded',
-              'CREDITED': 'Credited',
-              'PARTIALLY_REFUNDED': 'Partially Refunded',
-              'PARTIALLY_CREDITED': 'Partially Credited'
-            } %}          
-            {% if row.statusCode in status_text %}
-                <tr>
-                    <td class="product-purchased">
-                        {% for product in row.products %}
-                            <div class="font-bold">{{ product }} ({{ status_text[row.statusCode] }})</div>
-                        {% endfor %}
-                        {% if row.details %}
-                          <div class="transaction-details">
-                              {% for detail in row.details %}
-                                  <div>{{ detail }}</div>
-                              {% endfor %}
-                          </div>
-                        {% endif %}
-                    </td>
-                    <td>{{ row.folio }}</td>
-                    <td>{{ row.refundDate }}</td>
-                    <td>{{ '$0.00' if row.fee == '0.00' else '-$' + row.fee }}</td>
-                    <td>{{ '$0.00' if row.serviceFee == '0.00' else '-$' + row.serviceFee }}</td>
-                    <td>{{ '$0.00' if row.gst == '0.00' else '-$' + row.gst }}</td>
-                    <td>{{ '$0.00' if row.total == '0.00' else '-$' + row.total }}</td>
-                </tr>
-            {% endif %}
             {% if row.appliedCredits %}
                 <tr class="no-top-border">
                   <td>
@@ -300,6 +271,35 @@
                   <td>
                       <div>{{ '$0.00' if row.appliedCreditsAmount == '0.00' else '-$' + row.appliedCreditsAmount }}</div>
                   </td>
+                </tr>
+            {% endif %}
+            {% set status_text = {
+              'CANCELLED': 'Service Cancelled',
+              'REFUNDED': 'Refunded',
+              'CREDITED': 'Credited',
+              'PARTIALLY_REFUNDED': 'Partially Refunded',
+              'PARTIALLY_CREDITED': 'Partially Credited'
+            } %}          
+            {% if row.statusCode in status_text %}
+                <tr>
+                    <td class="product-purchased">
+                        {% for product in row.products %}
+                            <div class="font-bold">{{ product }} ({{ status_text[row.statusCode] }})</div>
+                        {% endfor %}
+                        {% if row.details %}
+                          <div class="transaction-details">
+                              {% for detail in row.details %}
+                                  <div>{{ detail }}</div>
+                              {% endfor %}
+                          </div>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.folio }}</td>
+                    <td>{{ row.refundDate }}</td>
+                    <td>{{ '$0.00' if row.fee == '0.00' else '-$' + row.fee }}</td>
+                    <td>{{ '$0.00' if row.serviceFee == '0.00' else '-$' + row.serviceFee }}</td>
+                    <td>{{ '$0.00' if row.gst == '0.00' else '-$' + row.gst }}</td>
+                    <td>{{ '$0.00' if row.total == '0.00' else '-$' + row.total }}</td>
                 </tr>
             {% endif %}
         {% endfor %}
