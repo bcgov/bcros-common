@@ -160,7 +160,7 @@
         {% if payment_method in ['DIRECT_PAY', 'CC'] %}
           <tr>
             <td colspan="2">
-                <div class="total-elements-no-border font-bold">
+                <div class="total-elements-top-border font-bold">
                     CREDIT CARD TOTAL:
                     <span class="total-elements-price font-bold">${{ data.totals if data else '0.0' }}</span>
                 </div>
@@ -172,24 +172,24 @@
         {% elif payment_method == 'ONLINE_BANKING' %}
           <tr>
             <td colspan="2">
-                <div class="total-elements-no-border font-bold">
+                <div class="total-elements-top-border font-bold">
                     ONLINE BANKING TOTAL:
                     <span class="total-elements-price font-bold">${{ data.totals if data else '0.0' }}</span>
-                    <div class="total-elements-last-row">
-                      Fees paid by online banking
-                    </div>
+                </div>
+                <div class="total-elements-last-row">
+                  Fees paid by online banking
                 </div>
             </td>
           </tr>
         {% elif payment_method == 'DRAWDOWN' %}
           <tr>
             <td colspan="2">
-                <div class="total-elements-no-border font-bold">
+                <div class="total-elements-top-border font-bold">
                     BC ONLINE TOTAL:
                     <span class="total-elements-price font-bold">${{ data.totals if data else '0.0' }}</span>
-                    <div class="total-elements-last-row">
-                      Fees for BC Registries and Online Services are deducted from the BC Online account.
-                    </div>
+                </div>
+                <div class="total-elements-last-row">
+                  Fees for BC Registries and Online Services are deducted from the BC Online account.
                 </div>
             </td>
           </tr>
