@@ -70,8 +70,10 @@
     .statement-totals{
       border: 3px solid #e2e7ed;
       margin-top: 20px;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
+      border-collapse: separate;
+      border-spacing: 0 0;
+      padding-top: 15px;
+      padding-bottom: 15px;
     }
 
     .wordmark {
@@ -479,7 +481,7 @@
     {% if hasPaymentInstructions and data.paymentMethod == 'EFT' %}
       {% set payment_method = 'EFT' %}
       {% set is_payment_instructions = true %}
-      <div class="inner-wrap eft-instruction">
+      <div class="inner-wrap eft-instruction page-break-before">
         {% include 'report-templates/statement_header.html' %}
         <h2>Payment Instructions</h2>
       </div>
