@@ -73,7 +73,7 @@
               </td>
           </tr>
         {% endif %}
-        {% if data and data.creditsApplied and data.creditsApplied != "0.00" %}
+        {% if data and data.creditsApplied and data.creditsApplied != "0.00" and payment_method in ['PAD', 'ONLINE_BANKING']  %}
         <tr>
           <td colspan="2">
               <div class="total-elements-no-border">
