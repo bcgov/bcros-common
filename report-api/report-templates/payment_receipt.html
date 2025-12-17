@@ -820,10 +820,14 @@
               Payment Method: <span> {{paymentMethodDescription}}</span>
             </div>
             {% endif %}
-            {% if appliedCredits %}
+            {% if paymentMethod in ('PAD', 'ONLINE_BANKING') %}
               {% if paymentMethod == 'PAD' %}
                 <div class="payment-row">
                   Pre-Authorized Debit Amount: <span>${{ "%.2f"|format(invoice.total - appliedCredits) }}</span>
+                </div>
+              {% elif paymentMethod == 'ONLINE_BANKING' %}
+                <div class="payment-row">
+                  Online Banking Amount: <span>${{ "%.2f"|format(invoice.total - appliedCredits) }}</span>
                 </div>
               {% endif %}
               <div class="payment-row">
