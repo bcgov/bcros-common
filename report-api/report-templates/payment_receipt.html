@@ -705,7 +705,7 @@
                 {% for item in partialRefund %}
                 <tr>
                   <td class="product-purchased">
-                    <div class="font-bold">Refunds</div>
+                    <div class="font-bold">{{'Refund as Credits' if paymentMethod in ['ONLINE_BANKING', 'PAD'] else 'Refunds'}}</div>
                     For: {{item.description}} <br>
                     (Transaction ID: {{ item.paymentLineItemId }})
                   </td>
@@ -748,7 +748,7 @@
                 <tr>
                     {% if isRefundReceipt %}
                       <td class="product-purchased">
-                        <div class="font-bold">Refunds</div>
+                        <div class="font-bold">{{"Refund as Credits" if invoice.statusCode == 'CREDITED' else "Refunds" }}</div>
                         For: {{item.description}} <br>
                         (Transaction ID: {{ refund.refundId }})
                       </td>
@@ -777,7 +777,7 @@
                 </tr>
               </tbody>
               <tfoot>
-                <td colspan="3" class="font-bold">TOTAL {{ 'REFUNDED' if isRefundReceipt else '' }} AMOUNT :</td>
+                <td colspan="3" class="font-bold">TOTAL {{ invoice.statusCode if isRefundReceipt else '' }} AMOUNT :</td>
                 <td>
                   {{'-' if isRefundReceipt else '' }}${{"%.2f"|format(invoice.total-invoice.get('serviceFees', 0)-invoice.get('gst', 0)) if invoice.total else '0.00'}}
                 </td>
