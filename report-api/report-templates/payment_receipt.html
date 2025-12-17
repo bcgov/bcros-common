@@ -835,7 +835,7 @@
               Invoice Number: <span> {{invoiceNumber}}</span>
             </div>
             {% endif %}
-            {% if bcOnlineAccountNumber %}
+            {% if bcOnlineAccountNumber and paymentMethod == 'DRAWDOWN' %}
             <div class="payment-row">
               BC Online Account Number: <span> {{bcOnlineAccountNumber}}</span>
             </div>
