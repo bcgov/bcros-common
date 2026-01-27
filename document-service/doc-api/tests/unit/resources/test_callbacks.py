@@ -17,7 +17,6 @@
 Test-Suite to ensure that the /callbacks endpoint is working as expected.
 """
 import copy
-import requests
 from http import HTTPStatus
 import json
 
@@ -163,79 +162,3 @@ def test_update_doc_rec(session, client, jwt, desc, payload_json, status, update
 def is_ci_testing() -> bool:
     """Check unit test environment: exclude pub/sub for CI testing."""
     return  current_app.config.get("DEPLOYMENT_ENV", "testing") == "testing"
-
-
-def get_test_colin(session, client, jwt):
-    """Assert ."""
-    if is_ci_testing() or not current_app.config.get("SUBSCRIPTION_API_KEY"):
-        return
-    # setup
-    headers = None   # {**kwargs, **{"Content-Type": "application/json"}}
-    headers_get_menu = {
-        "Connection": "keep-alive",
-        "Content-Type": "text/plain; charset=ISO-8859-1"
-    }
-    base_path = "https://www.corporateonline.gov.bc.ca/corporateonline/colin"
-    get_menu_path = base_path + "/accesstransaction/menu.do?action=overview&filingTypeCode=RPRNT&from=main"
-    overview_path = base_path + "/accesstransaction/menu.do"
-    search_path = base_path + "/identcorp/searchCorp.do"
-    receipt_path = base_path + "/reprint/report.do?action=receiptReport&check_token=no&historyIndex=1"
-    # get_menu_path = "https://www.corporateonline.gov.bc.ca/"
-    # logger.info(get_menu_path)
-    # api_key = current_app.config.get("SUBSCRIPTION_API_KEY")
-    #params = PARAM_TEST_APIKEY.format(api_key=api_key)
-    #req_path += params
-    #req_json = copy.deepcopy(payload_json)
-    # test
-    #payload = json.dumps(req_json).encode("utf-8")
-    response = requests.get(get_menu_path, headers=headers_get_menu)
-    # logger.info(response.text)
-    cookie: str = response.cookies["JSESSIONID"]
-    logger.info(f"cookie={cookie}")
-    cookies = dict(JSESSIONID=cookie)
-    overview_data = {
-        "formType": "overview",
-        "navigationAction": "next",
-        "nextButton.x": 28,
-        "nextButton.y": 13
-    }
-    response = requests.post(overview_path, headers=headers, data=overview_data, cookies=cookies)
-    logger.info(f"overview status={response.status_code}")
-    # with open("tests/unit/resources/colin_overview_response.txt", "w") as overview_file:
-    #    overview_file.write(response.text)
-    #    overview_file.close()
-    search_data = {
-        "defaultAction": "next",
-        "formType": "search",
-        "corpNum": "BC0659569",
-        "password": "PROVIDE",
-        "navigationAction": "next",
-        "nextButton.x": 27,
-        "nextButton.y": 7
-    }
-    response2 = requests.post(search_path, headers=headers, data=search_data, cookies=cookies)
-    logger.info(f"search status={response2.status_code}")
-    logger.info(response2.headers)
-    # with open("tests/unit/resources/colin_search_response.txt", "w") as search_file:
-    #    search_file.write(response2.text)
-    #    search_file.close()
-    response = requests.get(receipt_path, cookies=cookies)
-    logger.info(f"receipt report status={response.status_code}")
-    with open("tests/unit/resources/colin_receipt.pdf", "wb") as receipt_file:
-        receipt_file.write(response.content)
-        receipt_file.close()
-
-
-def test_colin_file(session, client, jwt):
-    """Assert ."""
-    test_file: str = None
-    with open("tests/unit/resources/colin-noa.html", "r") as data_file:
-        test_file = data_file.read()
-        data_file.close()
-    search_base = "/reprint/report.do?action={report_type}Report&check_token=no&historyIndex={filing_index}"
-    test_link = search_base.format(report_type="cert", filing_index="7")
-    result = test_file.find(test_link)
-    logger.info(f"search {test_link} find result={result}")
-    index_first_filing_date = test_file.find("January 15, 2025 9:30 AM")
-    index_first_report = test_file.find("historyIndex=0")
-    logger.info(f"first filing date={index_first_filing_date} first report link={index_first_report}")
