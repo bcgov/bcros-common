@@ -73,7 +73,6 @@ class Config:
         GC_NOTIFY_HOUSING_EMAIL_REPLY_TO_ID = os.getenv("GC_NOTIFY_HOUSING_EMAIL_REPLY_TO_ID", "")
 
     # GCP PubSub
-    GCP_AUTH_KEY = os.getenv("GCP_AUTH_KEY", "")
     AUDIENCE = os.getenv("AUDIENCE", "https://pubsub.googleapis.com/google.pubsub.v1.Subscriber")
     PUBLISHER_AUDIENCE = os.getenv("PUBLISHER_AUDIENCE", "https://pubsub.googleapis.com/google.pubsub.v1.Publisher")
     VERIFY_PUBSUB_EMAIL = os.getenv("VERIFY_PUBSUB_EMAIL", None)

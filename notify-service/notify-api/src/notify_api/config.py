@@ -70,7 +70,6 @@ class Config:  # pylint: disable=too-few-public-methods
         JWT_OIDC_JWKS_CACHE_TIMEOUT = 300
 
     # PUBSUB
-    GCP_AUTH_KEY = os.getenv("GCP_AUTH_KEY", "")
     AUDIENCE = os.getenv("AUDIENCE", "https://pubsub.googleapis.com/google.pubsub.v1.Subscriber")
     PUBLISHER_AUDIENCE = os.getenv("PUBLISHER_AUDIENCE", "https://pubsub.googleapis.com/google.pubsub.v1.Publisher")
     DELIVERY_GCNOTIFY_TOPIC = os.getenv("DELIVERY_GCNOTIFY_TOPIC", "")
