@@ -56,11 +56,11 @@ class TestEmailSMTPService(unittest.TestCase):
         """Test EmailSMTP initialization."""
         # Arrange
         mock_config = MagicMock()
-        mock_config.get.side_effect = lambda key: {
+        mock_config.get.side_effect = {
             "MAIL_SERVER": "smtp.example.com",
             "MAIL_PORT": self.TEST_SMTP_PORT,
             "MAIL_FROM_ID": "sender@example.com",
-        }.get(key)
+        }.get
         mock_current_app.config = mock_config
 
         # Act
@@ -83,7 +83,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -114,7 +114,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         # Create notification with multiple recipients
         multi_recipient_notification = Notification(
@@ -156,7 +156,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "development",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -183,7 +183,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         # Create content with attachments
         attachment = Attachment(file_name="test_document.pdf", file_bytes=b"fake pdf content")
@@ -226,7 +226,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         # Create content with unicode filename attachment
         attachment = Attachment(file_name="tëst_dócümént_ñäme.pdf", file_bytes=b"fake pdf content")
@@ -270,7 +270,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         mock_smtp_class.side_effect = smtplib.SMTPException("Connection failed")
 
@@ -296,7 +296,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         # Create notification with multiple recipients
         multi_recipient_notification = Notification(
@@ -338,7 +338,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
 
@@ -365,7 +365,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             # DEPLOYMENT_ENV is missing
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
 
@@ -392,7 +392,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -418,7 +418,7 @@ class TestEmailSMTPService(unittest.TestCase):
             "MAIL_FROM_ID": "sender@example.com",
             "DEPLOYMENT_ENV": "production",
         }
-        mock_current_app.config.get.side_effect = lambda key, default=None: mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = mock_config.get
 
         notification_no_content = Notification(
             id=1,

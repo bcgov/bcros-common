@@ -63,13 +63,13 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
         """Helper to create properly configured mock app."""
         config = {**self.mock_config, **(config_override or {})}
         mock_app = Mock()
-        mock_app.config.get.side_effect = lambda key, default=None: config.get(key, default)
+        mock_app.config.get.side_effect = config.get
         return mock_app
 
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_email_smtp_initialization(self, mock_current_app):
         """Test EmailSMTP class initialization."""
-        mock_current_app.config.get.side_effect = lambda key: self.mock_config.get(key)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
 
@@ -82,7 +82,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_production_environment(self, mock_current_app, mock_smtp_class):
         """Test email sending in production environment."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -101,7 +101,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_send_email_development_environment(self, mock_current_app, mock_smtp_class):
         """Test email sending in development environment with subject suffix."""
         dev_config = {**self.mock_config, "DEPLOYMENT_ENV": "development"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: dev_config.get(key, default)
+        mock_current_app.config.get.side_effect = dev_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -118,7 +118,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_multiple_recipients(self, mock_current_app, mock_smtp_class):
         """Test email sending to multiple recipients."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         multi_recipient_notification = Notification(
             id=1,
@@ -143,7 +143,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_with_attachments(self, mock_current_app, mock_smtp_class):
         """Test email sending with file attachments."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         attachment = Attachment(file_name="test_document.pdf", file_bytes=b"fake pdf content")
         content_with_attachments = Content(
@@ -173,7 +173,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_unicode_attachment_filename(self, mock_current_app, mock_smtp_class):
         """Test email sending with unicode characters in attachment filename."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         attachment = Attachment(file_name="tëst_dócümént_ñäme.pdf", file_bytes=b"fake pdf content")
         content_with_attachments = Content(
@@ -205,7 +205,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.logger")
     def test_send_email_smtp_connection_error(self, mock_logger, mock_current_app, mock_smtp_class):
         """Test handling of SMTP connection errors."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         mock_smtp_class.side_effect = smtplib.SMTPException("Connection failed")
 
@@ -221,7 +221,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.logger")
     def test_send_email_individual_recipient_error(self, mock_logger, mock_current_app, mock_smtp_class):
         """Test handling of individual recipient send errors."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         multi_recipient_notification = Notification(
             id=1,
@@ -253,7 +253,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_send_email_empty_deployment_env(self, mock_current_app, mock_smtp_class):
         """Test email sending with empty deployment environment."""
         empty_env_config = {**self.mock_config, "DEPLOYMENT_ENV": ""}
-        mock_current_app.config.get.side_effect = lambda key, default=None: empty_env_config.get(key, default)
+        mock_current_app.config.get.side_effect = empty_env_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -270,7 +270,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_send_email_missing_deployment_env(self, mock_current_app, mock_smtp_class):
         """Test email sending with missing deployment environment config."""
         config_without_env = {k: v for k, v in self.mock_config.items() if k != "DEPLOYMENT_ENV"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: config_without_env.get(key, default)
+        mock_current_app.config.get.side_effect = config_without_env.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -285,7 +285,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_no_content_error(self, mock_current_app):
         """Test email sending with notification having no content."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         notification_no_content = Notification(
             id=1,
@@ -306,7 +306,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_send_email_staging_environment(self, mock_current_app, mock_smtp_class):
         """Test email sending in staging environment."""
         staging_config = {**self.mock_config, "DEPLOYMENT_ENV": "staging"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: staging_config.get(key, default)
+        mock_current_app.config.get.side_effect = staging_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -322,7 +322,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_email_message_structure(self, mock_current_app, mock_smtp_class):
         """Test that email message structure is correctly formatted."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         mock_server = Mock()
         mock_smtp_class.return_value.__enter__.return_value = mock_server
@@ -346,7 +346,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_invalid_content_structure(self, mock_current_app):
         """Test sending with invalid content structure."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         # Create content without required attributes
         invalid_content = MagicMock()
@@ -372,7 +372,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.current_app", new_callable=Mock)
     def test_send_with_whitespace_recipients(self, mock_current_app, mock_smtp_class):
         """Test email sending with recipients containing whitespace."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         notification_with_spaces = Notification(
             id=1,
@@ -398,7 +398,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     @patch("notify_delivery.services.providers.email_smtp.logger")
     def test_send_general_exception_handling(self, mock_logger, mock_current_app, mock_smtp_class):
         """Test general exception handling during SMTP connection."""
-        mock_current_app.config.get.side_effect = lambda key, default=None: self.mock_config.get(key, default)
+        mock_current_app.config.get.side_effect = self.mock_config.get
 
         mock_smtp_class.side_effect = Exception("Unexpected error")
 
@@ -415,7 +415,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_prepare_subject_production(self, mock_current_app):
         """Test subject preparation in production environment."""
         production_config = {**self.mock_config, "DEPLOYMENT_ENV": "production"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: production_config.get(key, default)
+        mock_current_app.config.get.side_effect = production_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
         result = email_smtp._prepare_subject("Test Subject")
@@ -426,7 +426,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_prepare_subject_development(self, mock_current_app):
         """Test subject preparation in development environment."""
         dev_config = {**self.mock_config, "DEPLOYMENT_ENV": "development"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: dev_config.get(key, default)
+        mock_current_app.config.get.side_effect = dev_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
         result = email_smtp._prepare_subject("Test Subject")
@@ -437,7 +437,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_prepare_subject_unknown_env(self, mock_current_app):
         """Test subject preparation with unknown environment."""
         config_without_env = {k: v for k, v in self.mock_config.items() if k != "DEPLOYMENT_ENV"}
-        mock_current_app.config.get.side_effect = lambda key, default=None: config_without_env.get(key, default)
+        mock_current_app.config.get.side_effect = config_without_env.get
 
         email_smtp = EmailSMTP(self.mock_notification)
         result = email_smtp._prepare_subject("Test Subject")
@@ -448,7 +448,7 @@ class TestEmailSMTPServiceProvider(unittest.TestCase):
     def test_prepare_subject_empty_env(self, mock_current_app):
         """Test subject preparation with empty deployment environment."""
         empty_env_config = {**self.mock_config, "DEPLOYMENT_ENV": ""}
-        mock_current_app.config.get.side_effect = lambda key, default=None: empty_env_config.get(key, default)
+        mock_current_app.config.get.side_effect = empty_env_config.get
 
         email_smtp = EmailSMTP(self.mock_notification)
         result = email_smtp._prepare_subject("Test Subject")
