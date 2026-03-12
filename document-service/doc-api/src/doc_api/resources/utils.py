@@ -596,6 +596,8 @@ def get_doc_links(info: RequestInfo, results: list) -> list:
     """Generate document links for the documents in the list"""
     if not results:
         return results
+    if results and info.document_service_id and info.accept and info.accept.lower() == "application/pdf":
+        return get_doc_data(info, results)
     for result in results:
         storage_name = result.get("documentURL")
         storage_type = info.document_storage_type
@@ -603,6 +605,19 @@ def get_doc_links(info: RequestInfo, results: list) -> list:
             logger.info(f"getting link for type={storage_type} name={storage_name}...")
             doc_link = GoogleStorageService.get_document_link(storage_name, storage_type, 2)
             result["documentURL"] = doc_link
+    return results
+
+
+def get_doc_data(info: RequestInfo, results: list) -> list:
+    """Retrieve document binary data for the first document in the list"""
+    if not results:
+        return results
+    result = results[0]
+    storage_name = result.get("documentURL")
+    storage_type = info.document_storage_type
+    rep_data = GoogleStorageService.get_document(storage_name, storage_type)
+    if rep_data:
+        result["data"] = rep_data
     return results
 
 
