@@ -50,7 +50,7 @@ def post_product_reports(prod_code: str, entity_id: str, event_id: str, report_t
     account_id = ""
     try:
         if not is_report_authorized(jwt):
-            logger.error("User unuauthorized for this endpoint: not staff or service account.")
+            logger.error("User unauthorized for this endpoint: not staff or service account.")
             return resource_utils.unauthorized_error_response(account_id)
         account_id: str = resource_utils.get_account_id(request)
         req_path: str = POST_REQUEST_PATH_PRODUCT.format(
@@ -167,12 +167,15 @@ def get_product_event_reports(prod_code: str, entity_id: str, event_id: int):
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
         reports_json: list = ApplicationReport.find_by_event_id_json(event_id, entity_id, prod_code)
+        reports_json = add_event_documents(request, entity_id, event_id, reports_json)
         if not reports_json:
             logger.warning(f"No {prod_code} report records found for {entity_id} event id={event_id}.")
             return resource_utils.not_found_error_response(
                 f"GET {prod_code} report information by entity ID", str(event_id)
             )
-        response_json = get_report_links(reports_json, prod_code)
+        # Not currently used
+        # response_json = get_report_links(reports_json, prod_code)
+        response_json = remove_urls(reports_json)
         return jsonify(response_json), HTTPStatus.OK, CONTENT_JSON
     except DatabaseException as db_exception:
         return resource_utils.db_exception_response(
@@ -200,12 +203,12 @@ def get_product_history_reports(prod_code: str, entity_id: str):
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
         reports_json: list = ApplicationReport.find_by_entity_id_json(entity_id, prod_code)
+        reports_json = add_documents(request, entity_id, reports_json)
         if not reports_json:
             logger.warning(f"No {prod_code} report records found for entity id={entity_id}.")
             return resource_utils.not_found_error_response(
                 f"GET {prod_code} report information by entity ID", entity_id
             )
-        reports_json = add_documents(request, entity_id, reports_json)
         response_json = remove_urls(reports_json)
         return jsonify(response_json), HTTPStatus.OK, CONTENT_JSON
     except DatabaseException as db_exception:
@@ -361,6 +364,8 @@ def add_documents(req: request, entity_id: str, reports_json: list) -> list:
     docs_json = Document.find_history_by_consumer_id(entity_id)
     if not docs_json:
         return reports_json
+    if not reports_json:
+        return docs_json
     all_json: list = []
     event_id: int = 0
     for rep in reports_json:
@@ -377,6 +382,19 @@ def add_documents(req: request, entity_id: str, reports_json: list) -> list:
         if not doc.get("eventIdentifier") or doc.get("eventIdentifier") < 1:
             all_json.append(doc)
     return all_json
+
+
+def add_event_documents(req: request, entity_id: str, event_id: int, reports_json: list) -> list:
+    """Conditionally include documents to the entity identifier filing event request."""
+    if not req.args.get("includeDocuments", False):
+        return reports_json
+    docs_json = Document.find_history_by_consumer_id(entity_id)
+    if not docs_json:
+        return reports_json
+    for doc in docs_json:
+        if doc.get("eventIdentifier") and doc.get("eventIdentifier") == event_id:
+            reports_json.append(doc)
+    return reports_json
 
 
 def save_to_doc_storage(app_report: ApplicationReport, raw_data) -> str:

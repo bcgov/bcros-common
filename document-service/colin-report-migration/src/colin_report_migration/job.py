@@ -106,10 +106,13 @@ def is_stale_extract(filing_rows: list, filings_info: dict) -> bool:
     filings_page = filings_info.get("filings_page")
     filing_row = filing_rows[0]
     expected_first_filing_date: str = str(filing_row[3])
-    logger.debug(f"expected_first_filing_date={expected_first_filing_date}")
+    tz_first_filing_date: str = str(filing_row[4])
+    logger.info(f"expected_first_filing_date={expected_first_filing_date}, {tz_first_filing_date}")
     index_first_filing_date = filings_page.find(expected_first_filing_date)
+    index_tz_filing_date = filings_page.find(tz_first_filing_date)
     index_first_report = filings_page.find("historyIndex=0")
-    return index_first_report < index_first_filing_date
+    logger.info(f"index_first_report={index_first_report}, {index_tz_filing_date}, index_first_filing_date={index_first_filing_date}")
+    return index_first_report < index_first_filing_date and index_first_report < index_tz_filing_date
 
 
 def cleanup_pdf(pdf_data):

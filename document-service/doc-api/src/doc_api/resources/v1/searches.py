@@ -27,6 +27,8 @@ from doc_api.utils.auth import jwt
 from doc_api.utils.logging import logger
 
 GET_REQUEST_PATH = "/searches/{doc_class}"
+CONTENT_JSON = {"Content-Type": "application/json"}
+CONTENT_PDF = {"Content-Type": "application/pdf"}
 
 bp = Blueprint("SEARCHES1", __name__, url_prefix="/searches")  # pylint: disable=invalid-name
 
@@ -37,11 +39,10 @@ def get_searches_by_class(doc_class: str):
     """Get document information by document class for records that match the query parameters."""
     try:
         req_path: str = GET_REQUEST_PATH.format(doc_class=doc_class)
-
         info: RequestInfo = RequestInfo(
             RequestTypes.GET, req_path, None, resource_utils.get_doc_storage_type(doc_class)
         )
-        info = resource_utils.get_request_info(request, info, is_staff(jwt))
+        info: RequestInfo = resource_utils.get_request_info(request, info, is_staff(jwt))
         info.document_class = doc_class
         logger.info(f"Starting search request {req_path}, account={info.account_id}")
         if not info.account_id:
@@ -59,7 +60,9 @@ def get_searches_by_class(doc_class: str):
             req_json = info.json
             logger.info(f"No results found for request {req_json}.")
             return resource_utils.not_found_error_response("search documents information", account_id)
-        return jsonify(response_json), HTTPStatus.OK
+        if info.document_service_id and resource_utils.is_pdf(request) and len(response_json) == 1:
+            return response_json[0].get("data"), HTTPStatus.OK, CONTENT_PDF
+        return jsonify(response_json), HTTPStatus.OK, CONTENT_JSON
     except DatabaseException as db_exception:
         return resource_utils.db_exception_response(db_exception, account_id, "GET search for documents info")
     except BusinessException as exception:
