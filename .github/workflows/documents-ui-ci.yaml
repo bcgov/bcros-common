@@ -10,7 +10,6 @@ defaults:
   run:
     shell: bash
     working-directory: ./document-service/documents-ui
-
 jobs:
   documents-ui-ci:
     uses: bcgov/bcregistry-sre/.github/workflows/frontend-ci.yaml@main
@@ -18,4 +17,4 @@ jobs:
       app_name: "documents-ui"
       working_directory: "./document-service/documents-ui"
       codecov_flag: "documentsui"
-      node_version: "22"
+      node_version: "24"
