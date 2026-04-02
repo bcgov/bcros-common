@@ -75,3 +75,4 @@ class Config:  # pylint: disable=too-few-public-methods
     mig_update_previous: str = os.getenv("MIGRATION_UPDATE_PREVIOUS", "false")
     mig_update_previous = mig_update_previous.strip().lower()
     UPDATE_PREVIOUS: bool = mig_update_previous in ("yes", "true", "t", "on", "1")
+    UPDATE_CONVERSION_AR: bool = mig_update_previous in ("conv_ar", "conversion_ar")
