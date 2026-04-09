@@ -45,6 +45,24 @@ TEST_LEGACY_REPORT_FILENAME = [
     ("BC1191518-CERT-annualReport.pdf", False),
     ("BC1191518-RECEIPT-annualReport.pdf", False),
 ]
+# testdata pattern is ({filename}, {conversion})
+TEST_CONVERSION_REPORT_FILENAME = [
+    ("BC1191518-CONVL-FILING.pdf", True),
+    ("BC1191518-CONVL-RECEIPT.pdf", False),
+    ("BC1191518-CONVL-NOA.pdf", False),
+    ("BC1191518-CONVL-CERT.pdf", False),
+    ("changeOfAddress", False),
+    ("BC1191518-annualReport-FILING.pdf", False),
+    ("BC1191518-CONVL.pdf", False),
+    ("BC1191518-CONVL-annualReport.pdf", False),
+    ("BC1191518-ICORP-FILING.pdf", False),
+]
+
+
+@pytest.mark.parametrize("filename, is_conversion", TEST_CONVERSION_REPORT_FILENAME)
+def test_is_conversion_report(session, filename, is_conversion):
+    """Assert that determing if a report is a legacy conversion filing works as expected."""
+    assert is_conversion == report_utils.is_conversion_report(filename)
 
 
 @pytest.mark.parametrize("filename, is_legacy", TEST_LEGACY_REPORT_FILENAME)
