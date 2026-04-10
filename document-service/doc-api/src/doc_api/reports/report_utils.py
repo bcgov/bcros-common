@@ -48,9 +48,12 @@ CERTIFIED_COPY_PATH_LEGACY: str = "{templates}/static/certified-copy-legacy.png"
 CERTIFIED_COPY_PATH: str = "{templates}/static/certified-copy.png"
 CERTIFIED_COPY_TEXT_POINT_LEGACY = pymupdf.Point(423, 212)
 CERTIFIED_COPY_IMAGE_RECT_LEGACY = pymupdf.Rect(450.0, 145.0, 525.0, 205.0)
+CERTIFIED_COPY_TEXT_POINT_CONVERSION = pymupdf.Point(195, 212)
+CERTIFIED_COPY_IMAGE_RECT_CONVERSION = pymupdf.Rect(215.0, 145.0, 290.0, 205.0)
 CERTIFIED_COPY_TEXT_POINT = pymupdf.Point(433, 210)
 CERTIFIED_COPY_IMAGE_RECT = pymupdf.Rect(460.0, 142.0, 535.0, 202.0)
 CERTIFIED_COPY_REMOVE_RECT = pymupdf.Rect(450.0, 145.0, 600.0, 225.0)
+APP_FILING_TYPE_CONVERSION: str = "CONVL"
 
 
 class ReportTypes(BaseEnum):
@@ -469,7 +472,7 @@ def get_app_report_datetime():
     return timestamp.replace(" PM ", " pm ")
 
 
-def add_certified_copy(report_data: bytes, is_legacy: bool) -> bytes:
+def add_certified_copy(report_data: bytes, is_legacy: bool, is_conversion: bool = False) -> bytes:
     """Add the certified copy image and timestamp text to the report_data."""
     image_data = get_certified_copy_image(is_legacy)
     doc = pymupdf.Document(stream=report_data)
@@ -477,6 +480,9 @@ def add_certified_copy(report_data: bytes, is_legacy: bool) -> bytes:
     add_text = get_app_report_datetime()
     point = CERTIFIED_COPY_TEXT_POINT_LEGACY if is_legacy else CERTIFIED_COPY_TEXT_POINT
     image_rect = CERTIFIED_COPY_IMAGE_RECT_LEGACY if is_legacy else CERTIFIED_COPY_IMAGE_RECT
+    if is_legacy and is_conversion:
+        point = CERTIFIED_COPY_TEXT_POINT_CONVERSION
+        image_rect = CERTIFIED_COPY_IMAGE_RECT_CONVERSION
     if not is_legacy:
         page.add_redact_annot(CERTIFIED_COPY_REMOVE_RECT)
         page.apply_redactions()  # This permanently removes the content
@@ -500,4 +506,14 @@ def is_legacy_report(filename: str) -> bool:
             model_utils.REPORT_TYPE_NOA,
             model_utils.REPORT_TYPE_RECEIPT,
         )
+    return False
+
+
+def is_conversion_report(filename: str) -> bool:
+    """Legacy migrated reports have a distinct filename format: use to determine if conversion filing."""
+    if not filename:
+        return False
+    name_parts = filename.split("-")
+    if name_parts and len(name_parts) == 3:
+        return name_parts[1] == APP_FILING_TYPE_CONVERSION and name_parts[2].startswith(model_utils.REPORT_TYPE_FILING)
     return False

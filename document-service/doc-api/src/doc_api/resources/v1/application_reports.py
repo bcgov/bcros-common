@@ -448,7 +448,10 @@ def get_report_data(app_report: ApplicationReport, certified_copy: bool = False)
     if not rep_data or not certified_copy:
         return rep_data
     is_legacy_report: bool = report_utils.is_legacy_report(app_report.filename)
-    updated_data = report_utils.add_certified_copy(rep_data, is_legacy_report)
+    is_conversion: bool = False
+    if is_legacy_report and app_report.report_type == model_utils.REPORT_TYPE_FILING:
+        is_conversion = report_utils.is_conversion_report(app_report.filename)
+    updated_data = report_utils.add_certified_copy(rep_data, is_legacy_report, is_conversion)
     logger.info(f"Certified copy added to event {app_report.event_id}, filename {app_report.filename}.")
     return updated_data
 

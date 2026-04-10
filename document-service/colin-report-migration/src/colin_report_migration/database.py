@@ -39,6 +39,7 @@ select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:S
   from mig_colin_reports m, colin_extract.corporation c
  where c.corp_num = m.corp_num
    and m.migrated_ts is not null
+   and m.report_count > 0
    and c.corp_password is not null
    and not exists (select cp.id
                      from colin_extract.corp_processing cp

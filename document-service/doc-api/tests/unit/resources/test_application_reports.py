@@ -93,6 +93,8 @@ CC_NOA_INFILE = "tests/unit/reports/data/noa.pdf"
 CC_NOA_OUTFILE = "tests/unit/resources/noa-certified.pdf"
 CC_FILING_INFILE = "tests/unit/reports/data/filing.pdf"
 CC_FILING_OUTFILE = "tests/unit/resources/filing-certified.pdf"
+CC_FILING_AR_LEGACY_INFILE = "tests/unit/reports/data/legacy-conv-ar-filing.pdf"
+CC_FILING_AR_LEGACY_OUTFILE = "tests/unit/reports/data/legacy-conv-ar-certified.pdf"
 
 # testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {status})
 TEST_CREATE_DATA = [
@@ -183,6 +185,8 @@ TEST_GET_CERTIFIED_COPY_DATA = [
      "UT9900002 Notice Of Articles - 2026-01-16"),
     ("FILING", "UT9900002", 99900002, "FILING", CC_FILING_INFILE, CC_FILING_OUTFILE,
      "UT9900002 BC Limited Company Incorporation Application - 2026-01-16.pdf"),
+    ("Conversion AR legacy", "UT9900003", 99900003, "FILING", CC_FILING_AR_LEGACY_INFILE, CC_FILING_AR_LEGACY_OUTFILE,
+     "UT9900003-CONVL-FILING.pdf"),
 ]
 
 
@@ -545,6 +549,7 @@ def test_get_certified_copy(session, client, jwt, desc, entity_id, event_id, rep
     prod_code = "BUSINESS"
     create_path = PATH_PRODUCT.format(prod_code=prod_code, entity_id=entity_id, event_id=event_id, report_type=report_type)
     create_path += "?consumerFilingDate=2025-11-22T19:30:30%2B00:00&consumerFilename=" + filename
+    logger.info(f"create_path={create_path}")
     headers = create_header_account_upload(jwt, PRODUCT_ROLES_STAFF, "UT-TEST", "PS12345", MEDIA_PDF)
  
     raw_data = None
