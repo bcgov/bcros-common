@@ -1,10 +1,23 @@
-import { describe, it, expect } from 'vitest'
-import { truncate, pageSize } from '~/utils/documentRecords'
+import { describe, it, expect, vi } from 'vitest'
+import { truncate, pageSize, documentPreview } from '~/utils/documentRecords'
 
 describe('documentRecords', () => {
   describe('pageSize', () => {
     it('is 100', () => {
       expect(pageSize).toBe(100)
+    })
+  })
+
+  describe('documentPreview', () => {
+    it('calls URL.createObjectURL and returns the result', () => {
+      const mockUrl = 'blob:mock-url'
+      const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue(mockUrl)
+      const mockFile = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+
+      const result = documentPreview(mockFile)
+      expect(createObjectURLSpy).toHaveBeenCalledWith(mockFile)
+      expect(result).toBe(mockUrl)
+      createObjectURLSpy.mockRestore()
     })
   })
 

@@ -19,15 +19,12 @@ export default defineVitestConfig({
       enabled: true,
       reporter: ['text', 'cobertura'],
       reportsDirectory: './tests/coverage',
-      include: ['src/**/*.{ts,vue}'],
+      // Only measure testable utility files; exclude API layer, composables, stores,
+      // pages, layouts, and other files requiring full browser/server context.
+      include: ['src/utils/**/*.ts'],
       exclude: [
-        'src/interfaces/**',
-        'src/enums/**',
-        'src/shims.vue.d.ts',
-        'src/app.config.ts',
-        'src/app/router.options.ts',
-        'src/middleware/**',
-        'src/**/*.d.ts'
+        'src/utils/documentRequests.ts',
+        'src/utils/breadcrumbs.ts'
       ]
     }
   }

@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest'
-import { insensitiveStrCompare, deepChangesComparison } from '~/utils/commonUtils'
+import { describe, it, expect, vi } from 'vitest'
+import { scrollToTop, insensitiveStrCompare, deepChangesComparison } from '~/utils/commonUtils'
 
 describe('commonUtils', () => {
+  describe('scrollToTop', () => {
+    it('calls window.scrollTo with top: 0 and smooth behavior', () => {
+      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      scrollToTop()
+      expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+      scrollToSpy.mockRestore()
+    })
+  })
+
   describe('insensitiveStrCompare', () => {
     it('returns true for identical strings', () => {
       expect(insensitiveStrCompare('hello', 'hello')).toBe(true)
