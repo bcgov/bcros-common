@@ -13,6 +13,22 @@ export default defineVitestConfig({
       }
     },
     setupFiles: ['./tests/setup.ts'],
-    globals: true
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      enabled: true,
+      reporter: ['text', 'cobertura'],
+      reportsDirectory: './tests/coverage',
+      include: ['src/**/*.{ts,vue}'],
+      exclude: [
+        'src/interfaces/**',
+        'src/enums/**',
+        'src/shims.vue.d.ts',
+        'src/app.config.ts',
+        'src/app/router.options.ts',
+        'src/middleware/**',
+        'src/**/*.d.ts'
+      ]
+    }
   }
 })
