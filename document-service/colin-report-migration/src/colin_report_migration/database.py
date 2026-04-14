@@ -39,6 +39,7 @@ select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:S
   from mig_colin_reports m, colin_extract.corporation c
  where c.corp_num = m.corp_num
    and m.migrated_ts is not null
+   and m.report_count > 0
    and c.corp_password is not null
    and not exists (select cp.id
                      from colin_extract.corp_processing cp
@@ -68,7 +69,35 @@ select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:S
                                            'NOALC','NOCHN','NOCIX','LNKPS','NOAP2','NOCA2','NOCX2','NORV2','NOCR2',
                                            'NOCB2'))
 """
-
+QUERY_JOB_CORPS_CONVERSION_AR = """
+select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:SS') as migrated_ts, m.report_count,
+       m.error_count, m.migration_summary
+  from mig_colin_reports m, colin_extract.corporation c
+ where c.corp_num = m.corp_num
+   and m.migrated_ts is not null
+   and m.report_count > 0
+   and m.migration_summary is not null
+   and m.migration_summary->0->>'warning_message' is null
+   and c.corp_password is not null
+   and extract(year from c.recognition_dts) < 2005
+   and exists (select f.event_id
+                 from colin_extract.filing f,
+                      colin_extract.event e,
+                      colin_extract.conv_ledger cl,
+                      colin_extract.carsrept cr
+                where e.corp_num = m.corp_num
+                  and e.event_id = f.event_id
+                  and f.filing_type_cd = 'CONVL'
+                  and f.ods_type_cd = 'P'
+                  and f.event_id = cl.event_id
+                  and cl.cars_docmnt_id = cr.documtid
+                  and cr.docutype = 'AR'
+                  and not exists (select ms->>'filing_storage_name'
+                                    from mig_colin_reports m, json_array_elements(m.migration_summary) as ms
+                                   where m.corp_num = e.corp_num
+                                     and ms->>'filing_type' = 'CONVL'
+                                     and ms->>'filing_storage_name' is not null))
+"""
 QUERY_CORPS_JOB_ID_CLAUSE = " and m.job_id is not null and m.job_id = {job_id}"
 QUERY_CORPS_CORP_STATE_CLAUSE = " and m.op_state_type_cd = '{corp_state}'"
 QUERY_CORPS_YEAR_CLAUSE = " and m.recognition_dts is not null and EXTRACT(year from m.recognition_dts) = {corp_year}"
@@ -77,7 +106,13 @@ QUERY_FILINGS_BASE = """
 select to_char(e.event_timerstamp, 'YYYY-MM-DD HH24:MI:SS') as filing_date, f.event_id, f.filing_type_cd,
        trim(to_char(e.event_timerstamp, 'Month')) || to_char(e.event_timerstamp, ' DD, YYYY') as report_date,
        trim(to_char((e.event_timerstamp at time zone 'PDT'), 'Month')) ||
-       to_char((e.event_timerstamp at time zone 'PDT'), ' DD, YYYY') as tz_report_date
+       to_char((e.event_timerstamp at time zone 'PDT'), ' DD, YYYY') as tz_report_date, f.ods_type_cd,
+       case when f.filing_type_cd = 'CONVL' then
+                 (select cr.docutype
+                    from colin_extract.conv_ledger cl, colin_extract.carsrept cr
+                   where cl.event_id = f.event_id
+                     and cl.cars_docmnt_id = cr.documtid)
+            else null end as conv_filing_type
   from colin_extract.filing f, colin_extract.event e
  where e.event_id = f.event_id
    and f.filing_type_cd in ('AMALO','CONVL','REGST','NOAPA','NORVA','NOCAA','AMEND','NOCRX','NOCNX','ACASS','AMALX',
@@ -104,6 +139,13 @@ QUERY_JOB_CORP_UPDATE = """
 update mig_colin_reports
    set migrated_ts = now() at time zone 'utc',
        report_count = {report_count},
+       error_count = {err_count},
+       migration_summary = '{summary}'
+ where corp_num = '{corp_num}'
+ """
+QUERY_JOB_CORP_UPDATE_NO_TS = """
+update mig_colin_reports
+   set report_count = {report_count},
        error_count = {err_count},
        migration_summary = '{summary}'
  where corp_num = '{corp_num}'
@@ -159,6 +201,8 @@ class Database:  # pylint: disable=too-few-public-methods
     def get_job_corps_query(cls, config: Config) -> str:
         """Build the job run companies query based on the job env variables"""
         sql_statement: str = QUERY_JOB_CORPS_BASE if not config.UPDATE_PREVIOUS else QUERY_JOB_CORPS_RECENT_BASE
+        if config.UPDATE_CONVERSION_AR:
+            sql_statement = QUERY_JOB_CORPS_CONVERSION_AR
         if config.JOB_ID and config.JOB_ID > 0:
             sql_statement += QUERY_CORPS_JOB_ID_CLAUSE.format(job_id=config.JOB_ID)
         if config.JOB_CORP_STATE and config.JOB_CORP_STATE != "":
@@ -207,6 +251,18 @@ class Database:  # pylint: disable=too-few-public-methods
     def update_company_migration(cls, corp_num: str, report_count: int, err_count: int, summary: list):
         """Update company reports migration status in the business database after all reports saved."""
         sql_statement: str = QUERY_JOB_CORP_UPDATE.format(
+            corp_num=corp_num, report_count=report_count, err_count=err_count, summary=json.dumps(summary)
+        )
+        Database.bus_db_cursor.execute(sql_statement)
+        Database.bus_db_conn.commit()
+
+    @classmethod
+    def update_company_migration_no_ts(cls, corp_num: str, report_count: int, err_count: int, summary: list):
+        """
+        Update company reports migration status in the business database after all reports saved. Do not adjust the
+        migrated timestamp.
+        """
+        sql_statement: str = QUERY_JOB_CORP_UPDATE_NO_TS.format(
             corp_num=corp_num, report_count=report_count, err_count=err_count, summary=json.dumps(summary)
         )
         Database.bus_db_cursor.execute(sql_statement)

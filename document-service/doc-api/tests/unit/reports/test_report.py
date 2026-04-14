@@ -36,11 +36,15 @@ CERT_COPY_TEST_NOA_INFILE = "tests/unit/reports/data/noa.pdf"
 CERT_COPY_TEST_NOA_OUTFILE = "tests/unit/reports/data/noa-updated.pdf"
 CERT_COPY_TEST_FILING_INFILE = "tests/unit/reports/data/filing.pdf"
 CERT_COPY_TEST_FILING_OUTFILE = "tests/unit/reports/data/filing-updated.pdf"
+CERT_COPY_TEST_AR_LEGACY_INFILE = "tests/unit/reports/data/legacy-conv-ar-filing.pdf"
+CERT_COPY_TEST_AR_LEGACY_OUTFILE = "tests/unit/reports/data/legacy-conv-ar-filing-updated.pdf"
 
-# testdata pattern is ({legacy}, {infile}, {outfile})
+
+# testdata pattern is ({legacy}, {conversion}, {infile}, {outfile})
 TEST_CERT_COPY_DATA = [
-    (True, CERT_COPY_TEST_NOA_LEGACY_INFILE, CERT_COPY_TEST_NOA_LEGACY_OUTFILE),
-    (True, CERT_COPY_TEST_FILING_LEGACY_INFILE, CERT_COPY_TEST_FILING_LEGACY_OUTFILE),
+#    (True, False, CERT_COPY_TEST_NOA_LEGACY_INFILE, CERT_COPY_TEST_NOA_LEGACY_OUTFILE),
+#    (True, False, CERT_COPY_TEST_FILING_LEGACY_INFILE, CERT_COPY_TEST_FILING_LEGACY_OUTFILE),
+    (True, True, CERT_COPY_TEST_AR_LEGACY_INFILE, CERT_COPY_TEST_AR_LEGACY_OUTFILE),
 ]
 
 
@@ -100,25 +104,25 @@ def remove_text(session, client, jwt):
         pdf_file.close()
 
 
-@pytest.mark.parametrize("legacy,infile,outfile", TEST_CERT_COPY_DATA)
-def test_add_certified(session, client, jwt, legacy, infile, outfile):
+@pytest.mark.parametrize("legacy,conversion,infile,outfile", TEST_CERT_COPY_DATA)
+def test_add_certified(session, client, jwt, legacy, conversion, infile, outfile):
     """Assert that adding a certified copy image and date and time to an app report works as expected."""
     raw_data = None
     with open(infile, 'rb') as data_file:
         raw_data = data_file.read()
         data_file.close()
-    updated_pdf = report_utils.add_certified_copy(raw_data, legacy)
+    updated_pdf = report_utils.add_certified_copy(raw_data, legacy, conversion)
     with open(outfile, "wb") as pdf_file:
         pdf_file.write(updated_pdf)
         pdf_file.close()
 
 
-def add_modern_certified(session, client, jwt):
+def test_add_modern_certified(session, client, jwt):
     """Assert that adding a certified copy image and date and time to an app report works as expected."""
     raw_data = None
     image_data = report_utils.get_certified_copy_image(False)
-    infile = CERT_COPY_TEST_FILING_INFILE
-    outfile = CERT_COPY_TEST_FILING_OUTFILE
+    infile = CERT_COPY_TEST_NOA_INFILE
+    outfile = CERT_COPY_TEST_NOA_OUTFILE
     # noa coordinates = (14.17300033569336, 40.597023010253906, 210.7009735107422, 51.589019775390625)
     # file coordinates = (14.17300033569336, 40.34001541137695, 235.2669677734375, 52.706016540527344)
     with open(infile, 'rb') as data_file:

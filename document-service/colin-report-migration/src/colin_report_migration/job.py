@@ -107,11 +107,9 @@ def is_stale_extract(filing_rows: list, filings_info: dict) -> bool:
     filing_row = filing_rows[0]
     expected_first_filing_date: str = str(filing_row[3])
     tz_first_filing_date: str = str(filing_row[4])
-    logger.info(f"expected_first_filing_date={expected_first_filing_date}, {tz_first_filing_date}")
     index_first_filing_date = filings_page.find(expected_first_filing_date)
     index_tz_filing_date = filings_page.find(tz_first_filing_date)
     index_first_report = filings_page.find("historyIndex=0")
-    logger.info(f"index_first_report={index_first_report}, {index_tz_filing_date}, index_first_filing_date={index_first_filing_date}")
     return index_first_report < index_first_filing_date and index_first_report < index_tz_filing_date
 
 
@@ -171,6 +169,13 @@ def migrate_filing(filing_row, corp_num: str, filing_info: dict) -> dict:
             result = save_report(corp_num, REPORT_TYPE_RECEIPT, filing_info, result)
         if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_FILING):
             result = save_report(corp_num, REPORT_TYPE_FILING, filing_info, result)
+        elif (
+            result["filing_type"] == "CONVL"
+            and str(filing_row[5]) == "P"
+            and filing_row[6]
+            and str(filing_row[6]) == "AR"
+        ):
+            result = save_report(corp_num, REPORT_TYPE_FILING, filing_info, result)
         if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_NOA):
             result = save_report(corp_num, REPORT_TYPE_NOA, filing_info, result)
         if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_CERT):
@@ -181,16 +186,27 @@ def migrate_filing(filing_row, corp_num: str, filing_info: dict) -> dict:
     return result
 
 
-def migrate_reports(config: Config, rows: list) -> dict:
+def migrate_filing_conversion_ar(filing_row, corp_num: str, filing_info: dict) -> dict:
+    """Migrage a single conversion ledger AR filing report for a filing."""
+    result: dict = {"error_count": 0, "report_count": 0, "error_message": ""}
+    try:
+        result["filing_date"] = str(filing_row[0])
+        result["event_id"] = int(filing_row[1])
+        result["filing_type"] = str(filing_row[2])
+        result = save_report(corp_num, REPORT_TYPE_FILING, filing_info, result)
+    except Exception as err:
+        result["error_count"] = result.get("error_count") + 1
+        result["error_message"] = str(err)
+    return result
+
+
+def migrate_reports(config: Config, rows: list):
     """
     Migrate reports for each company in the rows list following the steps outlined in the job description.
 
     Args:
         config: Job configuration containing environment variables.
         rows: The business database mig_colin_reports table query results with the set of company identifiers.
-
-    Returns:
-        Updated status_data with zip file counts zip_file_count and zip_file_error_count
     """
     total_error_count: int = 0
     total_report_count: int = 0
@@ -238,7 +254,7 @@ def migrate_reports(config: Config, rows: list) -> dict:
     logger.info(f"Final counts companies={corp_count} errors={total_error_count} reports={total_report_count}.")
 
 
-def migrate_recent_reports(config: Config, rows: list) -> dict:
+def migrate_recent_reports(config: Config, rows: list):
     """
     For companies where the reports have migrated but a filing was created after the last
     report migration, and the filing has outputs, migrate reports for each company recent filing in the rows list
@@ -248,9 +264,6 @@ def migrate_recent_reports(config: Config, rows: list) -> dict:
         config: Job configuration containing environment variables.
         rows: The business database mig_colin_reports table query results with the set of company identifiers
               as well as the migrated_ts and current report_count, error_count and migration_summary.
-
-    Returns:
-        Updated status_data with zip file counts zip_file_count and zip_file_error_count
     """
     total_error_count: int = 0
     total_report_count: int = 0
@@ -301,6 +314,71 @@ def migrate_recent_reports(config: Config, rows: list) -> dict:
     logger.info(f"Final counts companies={corp_count} errors={total_error_count} reports={total_report_count}.")
 
 
+def migrate_conversion_ar(config: Config, rows: list):
+    """
+    For companies where the reports have migrated and conversion ledger annual reports exist, as a patch one-time update
+    migrate the missing conversion ledger annual report filing outputs.
+
+    Args:
+        config: Job configuration containing environment variables.
+        rows: The business database mig_colin_reports table query results with the set of company identifiers
+              as well as the migrated_ts and current report_count, error_count and migration_summary.
+    """
+    total_error_count: int = 0
+    total_report_count: int = 0
+    corp_num: str = ""
+    corp_count: int = 0
+    filing_summary: dict
+    for row in rows:  # pylint: disable=too-many-nested-blocks
+        summary_json = []
+        error_count: int = 0
+        report_count: int = 0
+        corp_count += 1
+        try:
+            corp_num = str(row[0])
+            filing_info: dict = get_corp_filings_page(corp_num, str(row[1]), config.COLIN_URL)
+            if filing_info.get("no_reports"):
+                filing_summary = {
+                    "skipped": True,
+                    "warning_message": "No report links in filing history page. Company state?",
+                }
+                summary_json.append(filing_summary)
+            else:
+                filing_rows = Database.get_corp_filings(corp_num)
+                if is_stale_extract(filing_rows, filing_info):
+                    filing_summary = {
+                        "skipped": True,
+                        "warning_message": "STALE: page first report date more recent than query first filing date.",
+                    }
+                    summary_json.append(filing_summary)
+                else:
+                    filing_info["filing_index"] = 0
+                    for filing_row in filing_rows:
+                        if (
+                            str(filing_row[2]) == "CONVL"
+                            and str(filing_row[5]) == "P"
+                            and filing_row[6]
+                            and str(filing_row[6]) == "AR"
+                        ):
+                            filing_summary = migrate_filing_conversion_ar(filing_row, corp_num, filing_info)
+                            report_count += filing_summary.get("report_count", 0)
+                            error_count += filing_summary.get("error_count", 0)
+                            summary_json.append(filing_summary)
+                        filing_info["filing_index"] = filing_info.get("filing_index") + 1
+                    total_error_count += error_count
+                    total_report_count += report_count
+            report_count += int(row[3])
+            error_count += int(row[4])
+            summary_json.extend(list(row[5]))
+            Database.update_company_migration_no_ts(corp_num, report_count, error_count, summary_json)
+        except Exception as report_err:
+            logger.error(f"Job {config.JOB_ID} convesion AR unexpected error for corp_num={corp_num}: {report_err}")
+            total_error_count += 1
+        if corp_count % 15 == 0:
+            logger.info(f"Job {config.JOB_ID} company migration count: {corp_count}")
+    logger.info(f"Final counts companies={corp_count} errors={total_error_count} reports={total_report_count}.")
+
+
 def job(config: Config):
     """
     Execute the job:
@@ -325,10 +403,12 @@ def job(config: Config):
     try:
         Database.init_app(config)
         rows = Database.get_job_corps(config)
-        if not config.UPDATE_PREVIOUS:
-            migrate_reports(config, rows)
-        else:
+        if config.UPDATE_PREVIOUS:
             migrate_recent_reports(config, rows)
+        elif config.UPDATE_CONVERSION_AR:
+            migrate_conversion_ar(config, rows)
+        else:
+            migrate_reports(config, rows)
     except (psycopg2.Error, Exception) as err:
         job_message: str = f"Run failed: {str(err)}."
         logger.error(job_message)

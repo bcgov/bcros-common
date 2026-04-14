@@ -286,10 +286,11 @@ class NotifyService:
                 return notification
 
             # Prepare notification data template
+            # Only include notificationId; the delivery service will fetch the full
+            # notification from the database. Including the full request (with large
+            # attachments) in the Pub/Sub message would exceed the 10MB size limit.
             notification_data = {
                 "notificationId": None,
-                "notificationProvider": provider,
-                "notificationRequest": notification_request.model_dump_json(),
             }
 
             successful_notifications = []
