@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(poetry check:*)",
+      "Bash(cmd //c \"nvm use 24\")",
+      "Bash(/c/nvm4w/nodejs/node.exe --version)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)"
+    ]
+  }
+}
