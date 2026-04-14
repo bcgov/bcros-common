@@ -66,6 +66,22 @@ describe('commonUtils', () => {
       expect(deepChangesComparison(base, current)).toBe(false)
     })
 
+    it('ignores undefined properties when cleanEmptyProperties is true', () => {
+      const base = { a: 1, b: undefined }
+      const current = { a: 1 }
+      expect(deepChangesComparison(base, current)).toBe(false)
+    })
+
+    it('ignores empty string properties when cleanEmptyProperties is true', () => {
+      const base = { a: 1, b: '' }
+      const current = { a: 1 }
+      expect(deepChangesComparison(base, current)).toBe(false)
+    })
+
+    it('returns false when both base and current are falsy', () => {
+      expect(deepChangesComparison(null as any, null as any)).toBe(false)
+    })
+
     it('detects differences in nested objects', () => {
       expect(deepChangesComparison({ a: { b: 1 } }, { a: { b: 2 } })).toBe(true)
     })

@@ -17,7 +17,7 @@ export default defineVitestConfig({
     coverage: {
       provider: 'v8',
       enabled: true,
-      reporter: ['text', 'cobertura'],
+      reporter: ['text', ['cobertura', { file: 'coverage.xml' }]],
       reportsDirectory: './tests/coverage',
       // Only measure testable utility files; exclude API layer, composables, stores,
       // pages, layouts, and other files requiring full browser/server context.
