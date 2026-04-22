@@ -17,6 +17,13 @@ on:
         - test
         - sandbox
         - prod
+      redeploy:
+        description: "Redeploy Application"
+        required: true
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 jobs:
   documents-ui-cd:
