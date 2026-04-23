@@ -24,8 +24,9 @@ from flask import current_app
 
 from doc_api.models import ApplicationReport, Document
 from doc_api.models import utils as model_utils
-from doc_api.utils.logging import logger
+from doc_api.resources.v1.application_reports import is_certified_copy_request
 from doc_api.services.authz import BC_REGISTRY, COLIN_ROLE, STAFF_ROLE, SYSTEM_ROLE
+from doc_api.utils.logging import logger
 from tests.unit.services.utils import (
     create_header_account,
     create_header_account_report,
@@ -49,13 +50,14 @@ TEST_DOC1 = {
     "consumerReferenceId": "3333001"
 }
 TEST_DATAFILE = "tests/unit/services/unit_test.pdf"
+TEST_DATAFILE_FILING = "tests/unit/reports/data/filing.pdf"
+TEST_DATAFILE_FILING_2 = "tests/unit/reports/data/legacy-filing.pdf"
 TEST_FILENAME = "updated_name.pdf"
 PARAM_TEST_FILENAME = "?consumerFilename=updated_name.pdf"
 MOCK_AUTH_URL = "https://test.api.connect.gov.bc.ca/mockTarget/auth/api/v1/"
 MEDIA_PDF = model_utils.CONTENT_TYPE_PDF
-PARAMS1 = (
-    "?consumerFilename=test.pdf&consumerFilingDate=2005-10-31"
-)
+PARAMS1 = "?consumerFilename=test.pdf&consumerFilingDate=2005-10-31"
+PARAMS2 = "?consumerFilename=test2.pdf&consumerFilingDate=2005-10-31"
 PATH: str = "/api/v1/application-reports/{entity_id}/{event_id}/{report_type}"
 CHANGE_PATH = "/api/v1/application-reports/{doc_service_id}"
 EVENT_PATH = "/api/v1/application-reports/events/{event_id}"
@@ -116,6 +118,12 @@ TEST_CREATE_DATA_PRODUCT = [
     ("Invalid role", "UT-123456", "123456", "FILING", HTTPStatus.UNAUTHORIZED, "BUSINESS", PRODUCT_ROLES_COLIN),
     ("Invalid product code", "UT-123456", "123456", "FILING", HTTPStatus.BAD_REQUEST, "XXX", PRODUCT_ROLES_SYSTEM),
  ]
+# testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {rtype2}, {status}, {prod_code}, {roles})
+TEST_CREATE_DATA_PRODUCT_ADDITIONAL = [
+    ("Valid minimal SA", "UT-123456", "123456", model_utils.REPORT_TYPE_FILING, model_utils.REPORT_TYPE_FILING_2,
+     HTTPStatus.CREATED, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+ ]
+
 # testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {status}, {payload})
 TEST_PATCH_DATA = [
     ("Invalid name", "UT-123456", "123456", "FILING", HTTPStatus.BAD_REQUEST, PATCH_PAYLOAD1),
@@ -188,6 +196,33 @@ TEST_GET_CERTIFIED_COPY_DATA = [
     ("Conversion AR legacy", "UT9900003", 99900003, "FILING", CC_FILING_AR_LEGACY_INFILE, CC_FILING_AR_LEGACY_OUTFILE,
      "UT9900003-CONVL-FILING.pdf"),
 ]
+# testdata pattern is ({description}, {report_type}, {certified_requested}, {certified_allowed})
+TEST_CERTIFIED_COPY_REQUEST_DATA = [
+    ("NOA not certified", model_utils.REPORT_TYPE_NOA, False, False),
+    ("NOA certified", model_utils.REPORT_TYPE_NOA, True, True),
+    ("FILING not certified", model_utils.REPORT_TYPE_FILING, False, False),
+    ("FILING certified", model_utils.REPORT_TYPE_FILING, True, True),
+    ("RECEIPT not certified", model_utils.REPORT_TYPE_RECEIPT, False, False),
+    ("RECEIPT certified", model_utils.REPORT_TYPE_RECEIPT, True, False),
+    ("CERT not certified", model_utils.REPORT_TYPE_CERT, False, False),
+    ("CERT certified", model_utils.REPORT_TYPE_CERT, True, False),
+    ("FILING additional 2 not certified", model_utils.REPORT_TYPE_FILING_2, False, False),
+    ("FILING additional 2 certified", model_utils.REPORT_TYPE_FILING_2, True, True),
+    ("FILING additional 3 not certified", model_utils.REPORT_TYPE_FILING_3, False, False),
+    ("FILING additional 3 certified", model_utils.REPORT_TYPE_FILING_3, True, True),
+    ("FILING additional 4 not certified", model_utils.REPORT_TYPE_FILING_4, False, False),
+    ("FILING additional 4 certified", model_utils.REPORT_TYPE_FILING_4, True, True),
+]
+# testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {status}, {prod_code}, {roles})
+TEST_PUT_DATA_PRODUCT = [
+    ("Invalid entity ID", "1", "12345", "FILING", HTTPStatus.BAD_REQUEST, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+    ("Invalid event ID", "UT-123456", "JUNK", "FILING", HTTPStatus.BAD_REQUEST, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+    ("Invalid report type", "UT-123456", "123456", "F", HTTPStatus.BAD_REQUEST, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+    ("Invalid no payload", "UT-123456", "123456", "FILING", HTTPStatus.BAD_REQUEST, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+    ("Invalid role", "UT-123456", "123456", "FILING", HTTPStatus.UNAUTHORIZED, "BUSINESS", PRODUCT_ROLES_COLIN),
+    ("Invalid product code", "UT-123456", "123456", "FILING", HTTPStatus.BAD_REQUEST, "XXX", PRODUCT_ROLES_SYSTEM),
+    ("Valid SA", "UT-123456", "123456", "FILING", HTTPStatus.CREATED, "BUSINESS", PRODUCT_ROLES_SYSTEM),
+]
 
 
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status,prod_code,roles", TEST_CREATE_DATA_PRODUCT)
@@ -221,6 +256,106 @@ def test_product_create(session, client, jwt, desc, entity_id, event_id, report_
         assert report_json.get("productCode")
         app_report: ApplicationReport = ApplicationReport.find_by_doc_service_id(report_json.get("identifier"))
         assert app_report
+
+
+@pytest.mark.parametrize("desc,entity_id,event_id,report_type,report_type2,status,prod_code,roles", TEST_CREATE_DATA_PRODUCT_ADDITIONAL)
+def test_product_create_additional(session, client, jwt, desc, entity_id, event_id, report_type, report_type2, status, prod_code, roles):
+    """Assert that a post save new product filing and additional filing reports works as expected."""
+    if is_ci_testing():
+        return
+
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = create_header_account_upload(jwt, roles, "UT-TEST", "PS12345", MEDIA_PDF)
+    req_path = PATH_PRODUCT.format(prod_code=prod_code, entity_id=entity_id, event_id=event_id, report_type=report_type)
+    # test
+    if status != HTTPStatus.CREATED:
+        response = client.post(req_path, data=None, headers=headers, content_type=MEDIA_PDF)
+    else:
+        raw_data = None
+        req_path += PARAMS1
+        with open(TEST_DATAFILE_FILING, "rb") as data_file:
+            raw_data = data_file.read()
+            data_file.close()
+        response = client.post(req_path, data=raw_data, headers=headers, content_type=MEDIA_PDF)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.CREATED:
+        report_json = response.json
+        assert report_json
+        assert report_json.get("identifier")
+        assert report_json.get("url")
+        assert report_json.get("productCode") == prod_code
+        assert report_json.get("entityIdentifier") == entity_id
+        assert report_json.get("eventIdentifier") == int(event_id)
+        assert report_json.get("reportType") == report_type
+        app_report: ApplicationReport = ApplicationReport.find_by_doc_service_id(report_json.get("identifier"))
+        assert app_report
+    if status == HTTPStatus.CREATED and report_type2:
+        req_path = PATH_PRODUCT.format(prod_code=prod_code, entity_id=entity_id, event_id=event_id, report_type=report_type2)
+        req_path += PARAMS2
+        with open(TEST_DATAFILE_FILING_2, "rb") as data_file:
+            raw_data = data_file.read()
+            data_file.close()
+        response = client.post(req_path, data=raw_data, headers=headers, content_type=MEDIA_PDF)
+        assert response.status_code == status
+        report_json = response.json
+        assert report_json
+        assert report_json.get("identifier")
+        assert report_json.get("url")
+        assert report_json.get("productCode") == prod_code
+        assert report_json.get("entityIdentifier") == entity_id
+        assert report_json.get("eventIdentifier") == int(event_id)
+        assert report_json.get("reportType") == report_type2
+        app_report: ApplicationReport = ApplicationReport.find_by_doc_service_id(report_json.get("identifier"))
+        assert app_report
+
+
+@pytest.mark.parametrize("desc,entity_id,event_id,report_type,status,prod_code,roles", TEST_PUT_DATA_PRODUCT)
+def test_product_replace(session, client, jwt, desc, entity_id, event_id, report_type, status, prod_code, roles):
+    """Assert that a put replace product report works as expected."""
+    if is_ci_testing():
+        return
+    # setup
+    current_app.config.update(AUTH_SVC_URL=MOCK_AUTH_URL)
+    headers = create_header_account_upload(jwt, roles, "UT-TEST", "PS12345", MEDIA_PDF)
+    req_path = PATH_PRODUCT.format(prod_code=prod_code, entity_id=entity_id, event_id=event_id, report_type=report_type)
+    # test
+    if status != HTTPStatus.CREATED:
+        response = client.post(req_path, data=None, headers=headers, content_type=MEDIA_PDF)
+    else:
+        req_path += PARAMS1
+        raw_data = None
+        with open(TEST_DATAFILE, "rb") as data_file:
+            raw_data = data_file.read()
+            data_file.close()
+        response = client.post(req_path, data=raw_data, headers=headers, content_type=MEDIA_PDF)
+        # logger.info(response.json)
+
+    # check
+    assert response.status_code == status
+    if response.status_code == HTTPStatus.CREATED:
+        report_json = response.json
+        assert report_json
+        assert report_json.get("identifier")
+        drs_id: str = report_json.get("identifier")
+        req_path = CHANGE_PATH_PRODUCT.format(prod_code=prod_code, doc_service_id=drs_id)
+        raw_data = None
+        with open(TEST_DATAFILE_FILING, "rb") as data_file:
+            raw_data = data_file.read()
+            data_file.close()
+        response2 = client.put(req_path, data=raw_data, headers=headers, content_type=MEDIA_PDF)
+        # logger.info(response2.json)
+        assert response2.status_code == status
+        report2_json = response.json
+        assert report2_json
+        assert report2_json.get("identifier") == drs_id
+        assert report2_json.get("url")
+        assert report2_json.get("productCode") == prod_code
+        assert report2_json.get("entityIdentifier") == entity_id
+        assert report2_json.get("eventIdentifier") == int(event_id)
+        assert report2_json.get("reportType") == report_type
 
 
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status,payload,prod_code,roles", TEST_PATCH_DATA_PRODUCT)
@@ -573,6 +708,14 @@ def test_get_certified_copy(session, client, jwt, desc, entity_id, event_id, rep
     with open(outfile, "wb") as pdf_file:
         pdf_file.write(response.data)
         pdf_file.close()
+
+
+@pytest.mark.parametrize("desc,report_type,certified_requested,certified_allowed", TEST_CERTIFIED_COPY_REQUEST_DATA)
+def test_certified_copy(session, client, jwt, desc, report_type, certified_requested, certified_allowed):
+    """Assert that the certified copy check for a report type works as expected."""
+    app_report: ApplicationReport = ApplicationReport(report_type=report_type)
+    result: bool = is_certified_copy_request(app_report, certified_requested)
+    assert result == certified_allowed
 
 
 def is_ci_testing() -> bool:

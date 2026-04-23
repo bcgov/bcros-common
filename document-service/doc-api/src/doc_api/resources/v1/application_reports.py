@@ -115,6 +115,34 @@ def update_product_report_info(prod_code: str, doc_service_id: str):
         return resource_utils.default_exception_response(default_exception)
 
 
+@bp.route("/<string:prod_code>/<string:doc_service_id>", methods=["PUT", "OPTIONS"])
+@jwt.requires_auth
+def replace_product_report(prod_code: str, doc_service_id: str):
+    """Replace product report for application report record that is associated with the document service ID."""
+    try:
+        account_id = resource_utils.get_account_id(request)
+        if not is_report_authorized(jwt):
+            logger.error("User unuauthorized for this endpoint: not staff or service account.")
+            return resource_utils.unauthorized_error_response(account_id)
+        req_path: str = CHANGE_REQUEST_PATH_PRODUCT.format(product_code=prod_code, doc_service_id=doc_service_id)
+        logger.info(f"Starting replace product report record request {req_path}, account={account_id}")
+        if not request.get_data():
+            logger.error(f"Replace product report request id={doc_service_id} no payload.")
+            return resource_utils.bad_request_response("Replace product report request invalid: no payload.")
+        app_report: ApplicationReport = ApplicationReport.find_by_doc_service_id(doc_service_id, prod_code)
+        if not app_report:
+            logger.warning(f"No product report record found for {prod_code} document service id={doc_service_id}.")
+            return resource_utils.not_found_error_response(f"PATCH {prod_code} report information", doc_service_id)
+        response_json = save_replace(app_report, request.get_data())
+        return jsonify(response_json), HTTPStatus.CREATED, CONTENT_JSON
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(db_exception, account_id, "PATCH product report information")
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
 @bp.route("/<string:prod_code>/<string:doc_service_id>", methods=["GET", "OPTIONS"])
 @jwt.requires_auth
 def get_individual_product_report(prod_code: str, doc_service_id: str):
@@ -424,6 +452,17 @@ def save_create(request_json: dict, raw_data) -> dict:
     return report_json
 
 
+def save_replace(app_report: ApplicationReport, raw_data) -> dict:
+    """Replace app report record document with request binary data. Return a download link"""
+    logger.info(f"save_replace starting raw data size={len(raw_data)}, saving to doc storage...")
+    doc_link: str = save_to_doc_storage(app_report, raw_data)
+    app_report.save()
+    report_json = app_report.json
+    report_json["url"] = doc_link
+    logger.info("save_replace completed...")
+    return report_json
+
+
 def get_report_link(app_report: ApplicationReport) -> dict:
     """Generate the report download URL link for the app report."""
     report_json: dict = app_report.json
@@ -464,9 +503,11 @@ def get_report_links(reports_json: list, product_code: str) -> list:
     for report_json in reports_json:
         storage_name: str = report_json.get("url")
         report_type: str = report_json.get("reportType")
-        if storage_name and report_type in (model_utils.REPORT_TYPE_FILING, model_utils.REPORT_TYPE_NOA):
+        if storage_name and (
+            report_type == model_utils.REPORT_TYPE_NOA or report_type.startswith(model_utils.REPORT_TYPE_FILING)
+        ):
             report_json["url"] = ""
-        elif storage_name and report_type not in (model_utils.REPORT_TYPE_FILING, model_utils.REPORT_TYPE_NOA):
+        elif storage_name:
             logger.debug(f"getting link for type={storage_type} name={storage_name}...")
             doc_link = GoogleStorageService.get_document_link(storage_name, storage_type, 2)
             report_json["url"] = doc_link
@@ -475,10 +516,15 @@ def get_report_links(reports_json: list, product_code: str) -> list:
 
 def is_certified_copy_request(report_data: ApplicationReport, certified_copy) -> bool:
     """Verify a report request is for a certified copy of the report."""
-    if not report_data.report_type or report_data.report_type not in (
+    # Allow certified copies of any application filing report where the report type starts with "FILING".
+    if not report_data.report_type:
+        return False
+    if report_data.report_type not in (
         model_utils.REPORT_TYPE_NOA,
         model_utils.REPORT_TYPE_FILING,
-    ):
+    ) and not str(
+        report_data.report_type
+    ).startswith(model_utils.REPORT_TYPE_FILING):
         return False
     return certified_copy and bool(certified_copy) and bool(certified_copy) is True
 
