@@ -214,7 +214,7 @@ paths:
                   summary: Upload a report response.
                   value:
                     identifier: DSR0100001003
-                    entityIdentifier: BC794361
+                    entityIdentifier: BC0794361
                     eventIdentifier: 4194022
                     reportType: RECEIPT
                     dateCreated: '2025-03-03T22:58:45+00:00'
@@ -274,7 +274,7 @@ paths:
                   summary: Update a receipt report response.
                   value:
                     identifier: DSR0100001003
-                    entityIdentifier: BC794361
+                    entityIdentifier: BC0794361
                     eventIdentifier: 4194022
                     reportType: RECEIPT
                     dateCreated: '2025-03-03T22:58:45+00:00'
@@ -289,6 +289,58 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - app-reports
+      summary: Replace an existing application report.
+      description: <p>Replace the existing application report record specified by the identifer with the payload document. The identifier is the DRS unique identifier for the report returned in a previous POST or GET response.</p>
+      operationId: put-product-report
+      requestBody:
+        content:
+          application/pdf:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Created
+          headers:
+            Access-Control-Allow-Origin:
+              $ref: '#/components/headers/AccessControlAllowOrigin'
+            Access-Control-Allow-Methods:
+              $ref: '#/components/headers/AccessControlAllowMethods'
+            Access-Control-Allow-Headers:
+              $ref: '#/components/headers/AccessControlAllowHeaders'
+            Access-Control-Max-Age:
+              $ref: '#/components/headers/AccessControlMaxAge'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/applicationReport'
+              examples:
+                /api/v1/application-reports/BUSINESS/DSR0100001003/put:
+                  summary: Replace a filing report response.
+                  value:
+                    identifier: DSR0100001003
+                    entityIdentifier: BC0794361
+                    eventIdentifier: 4194022
+                    reportType: FILING
+                    dateCreated: '2025-03-03T22:58:45+00:00'
+                    datePublished: '2023-12-22T16:22:32+00:00'
+                    name: AR-Filing-4194022.pdf
+                    url: 'storage-url-here'
+                    productCode: BUSINESS
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
     get:
       parameters:
         - name: certifiedCopy
