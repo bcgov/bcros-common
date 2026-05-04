@@ -24,7 +24,11 @@ from flask import current_app
 
 from doc_api.models import ApplicationReport, Document
 from doc_api.models import utils as model_utils
-from doc_api.resources.v1.application_reports import build_event_zip, get_zip_filename, is_certified_copy_request
+from doc_api.resources.v1.application_reports import (
+    build_event_zip, get_zip_filename,
+    is_certified_copy_report_type,
+    is_certified_copy_request
+)
 from doc_api.services.authz import BC_REGISTRY, COLIN_ROLE, STAFF_ROLE, SYSTEM_ROLE
 from doc_api.services.document_storage.storage_service import GoogleStorageService
 from doc_api.utils.logging import logger
@@ -121,7 +125,7 @@ PAYLOAD_ZIP2 = [
     {"name": "filing-name.pdf", "reportType": "X"}
 ]
 REPORT_TYPES_ZIP = ["CERT", "FILING", "NOA", "RECEIPT"]
-REPORT_TYPES_ZIP2 = ["CERT", "FILING", "FILING-2", "RECEIPT"]
+REPORT_TYPES_ZIP2 = ["FILING", "FILING-3", "RECEIPT"]
 PAYLOAD_EMPTY = []
 OUTFILE_ZIP1 = "tests/unit/resources/test-event-all.zip"
 OUTFILE_ZIP2 = "tests/unit/resources/test-event-all-2.zip"
@@ -247,9 +251,21 @@ TEST_CERTIFIED_COPY_REQUEST_DATA = [
     ("FILING additional 2 not certified", model_utils.REPORT_TYPE_FILING_2, False, False),
     ("FILING additional 2 certified", model_utils.REPORT_TYPE_FILING_2, True, True),
     ("FILING additional 3 not certified", model_utils.REPORT_TYPE_FILING_3, False, False),
-    ("FILING additional 3 certified", model_utils.REPORT_TYPE_FILING_3, True, True),
+    ("FILING additional 3 certified requested", model_utils.REPORT_TYPE_FILING_3, True, False),
     ("FILING additional 4 not certified", model_utils.REPORT_TYPE_FILING_4, False, False),
     ("FILING additional 4 certified", model_utils.REPORT_TYPE_FILING_4, True, True),
+]
+# testdata pattern is ({description}, {report_type}, {certified})
+TEST_CERTIFIED_COPY_TYPE_DATA = [
+    ("NOA certified", model_utils.REPORT_TYPE_NOA, True),
+    ("FILING certified", model_utils.REPORT_TYPE_FILING, True),
+    ("RECEIPT not certified", model_utils.REPORT_TYPE_RECEIPT, False),
+    ("CERT not certified", model_utils.REPORT_TYPE_CERT, False),
+    ("FILING additional 2 certified", model_utils.REPORT_TYPE_FILING_2, True),
+    ("FILING additional 3 not certified", model_utils.REPORT_TYPE_FILING_3, False),
+    ("FILING additional 4 certified", model_utils.REPORT_TYPE_FILING_4, True),
+    ("None not certified", None, False),
+    ("Ad hoc not certified", None, False),
 ]
 # testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {status}, {prod_code}, {roles})
 TEST_PUT_DATA_PRODUCT = [
@@ -810,9 +826,16 @@ def test_get_certified_copy(session, client, jwt, desc, entity_id, event_id, rep
         pdf_file.close()
 
 
+@pytest.mark.parametrize("desc,report_type,certified", TEST_CERTIFIED_COPY_TYPE_DATA)
+def test_certified_copy_type(session, client, jwt, desc, report_type, certified):
+    """Assert that the certified copy report type check works as expected."""
+    result: bool = is_certified_copy_report_type(report_type)
+    assert result == certified
+
+
 @pytest.mark.parametrize("desc,report_type,certified_requested,certified_allowed", TEST_CERTIFIED_COPY_REQUEST_DATA)
-def test_certified_copy(session, client, jwt, desc, report_type, certified_requested, certified_allowed):
-    """Assert that the certified copy check for a report type works as expected."""
+def test_certified_copy_request(session, client, jwt, desc, report_type, certified_requested, certified_allowed):
+    """Assert that the certified copy request for a report type works as expected."""
     app_report: ApplicationReport = ApplicationReport(report_type=report_type)
     result: bool = is_certified_copy_request(app_report, certified_requested)
     assert result == certified_allowed

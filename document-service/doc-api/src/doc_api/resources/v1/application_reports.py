@@ -551,9 +551,7 @@ def get_report_links(reports_json: list, product_code: str) -> list:
     for report_json in reports_json:
         storage_name: str = report_json.get("url")
         report_type: str = report_json.get("reportType")
-        if storage_name and (
-            report_type == model_utils.REPORT_TYPE_NOA or report_type.startswith(model_utils.REPORT_TYPE_FILING)
-        ):
+        if storage_name and is_certified_copy_report_type(report_type):
             report_json["url"] = ""
         elif storage_name:
             logger.debug(f"getting link for type={storage_type} name={storage_name}...")
@@ -562,17 +560,23 @@ def get_report_links(reports_json: list, product_code: str) -> list:
     return reports_json
 
 
+def is_certified_copy_report_type(report_type: str) -> bool:
+    """Determine if a report type is a certified copy type."""
+    if not report_type:
+        return False
+    if report_type in (
+        model_utils.REPORT_TYPE_CERT,
+        model_utils.REPORT_TYPE_RECEIPT,
+        model_utils.REPORT_TYPE_FILING_3,  # FILING 3 specifies not certified copy.
+    ):
+        return False
+    # Allow certified copies of any application filing report where the report type starts with "FILING".
+    return report_type == model_utils.REPORT_TYPE_NOA or report_type.startswith(model_utils.REPORT_TYPE_FILING)
+
+
 def is_certified_copy_request(report_data: ApplicationReport, certified_copy) -> bool:
     """Verify a report request is for a certified copy of the report."""
-    # Allow certified copies of any application filing report where the report type starts with "FILING".
-    if not report_data.report_type:
-        return False
-    if report_data.report_type not in (
-        model_utils.REPORT_TYPE_NOA,
-        model_utils.REPORT_TYPE_FILING,
-    ) and not str(
-        report_data.report_type
-    ).startswith(model_utils.REPORT_TYPE_FILING):
+    if not is_certified_copy_report_type(report_data.report_type):
         return False
     return certified_copy and bool(certified_copy) and bool(certified_copy) is True
 
@@ -618,7 +622,7 @@ def build_event_zip(request_json: dict, reports_json: dict, prod_code: str) -> b
                     storage_type = resource_utils.get_doc_storage_type(report.get("documentClass"))
                 filename: str = get_zip_filename(request_json, report)
                 rep_data = GoogleStorageService.get_document(storage_name, storage_type.value)
-                if rep_type == model_utils.REPORT_TYPE_NOA or rep_type.startswith(model_utils.REPORT_TYPE_FILING):
+                if is_certified_copy_report_type(rep_type):
                     # Add certified copy
                     is_legacy_report: bool = report_utils.is_legacy_report(report.get("name"))
                     is_conversion: bool = False
