@@ -208,7 +208,7 @@ def get_product_event_reports_all(prod_code: str, entity_id: str, event_id: int)
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
         reports_json = ApplicationReport.find_by_event_id_json(event_id, entity_id, prod_code)
-        reports_json = add_event_documents(request, entity_id, event_id, reports_json)
+        reports_json = add_event_documents(entity_id, event_id, reports_json)
         if not reports_json:
             logger.warning(f"No {prod_code} report records found for {entity_id} event id={event_id}.")
             return resource_utils.not_found_error_response(
@@ -243,7 +243,8 @@ def get_product_event_reports(prod_code: str, entity_id: str, event_id: int):
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
         reports_json: list = ApplicationReport.find_by_event_id_json(event_id, entity_id, prod_code)
-        reports_json = add_event_documents(request, entity_id, event_id, reports_json)
+        if is_include_docs_request(request.args.get("includeDocuments")):
+            reports_json = add_event_documents(entity_id, event_id, reports_json)
         if not reports_json:
             logger.warning(f"No {prod_code} report records found for {entity_id} event id={event_id}.")
             return resource_utils.not_found_error_response(
@@ -460,10 +461,13 @@ def add_documents(req: request, entity_id: str, reports_json: list) -> list:
     return all_json
 
 
-def add_event_documents(req: request, entity_id: str, event_id: int, reports_json: list) -> list:
+def is_include_docs_request(include_docs) -> bool:
+    """Determine if application report filing request includes client submitted documents."""
+    return include_docs and bool(include_docs) and bool(include_docs) is True
+
+
+def add_event_documents(entity_id: str, event_id: int, reports_json: list) -> list:
     """Conditionally include documents to the entity identifier filing event request."""
-    if not req.args.get("includeDocuments", False):
-        return reports_json
     docs_json = Document.find_history_by_consumer_id(entity_id)
     if not docs_json:
         return reports_json
