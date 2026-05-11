@@ -31,7 +31,9 @@ class TestAppInitialization(unittest.TestCase):
     @patch("notify_delivery.queue")
     @patch("notify_delivery.db")
     @patch("notify_delivery.config")
-    def test_create_app_basic(self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener, mock_event):
+    def test_create_app_basic(
+        self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener, mock_event
+    ):
         """Test basic app creation."""
         # Arrange
         mock_config_obj = Mock()
