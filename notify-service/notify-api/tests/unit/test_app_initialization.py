@@ -34,14 +34,12 @@ class TestSafeCloseWrapper(unittest.TestCase):
         """Test that the on_connect listener wraps close() to suppress InterfaceError."""
         # Arrange
         mock_config_obj = Mock()
-        mock_config_obj.configure_mock(
-            **{
-                "get.return_value": None,
-                "DB_INSTANCE_CONNECTION_NAME": None,
-                "DB_USER": "test_user",
-                "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            }
-        )
+        mock_config_obj.configure_mock(**{
+            "get.return_value": None,
+            "DB_INSTANCE_CONNECTION_NAME": None,
+            "DB_USER": "test_user",
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        })
         mock_config.__getitem__.return_value = mock_config_obj
         mock_engine = Mock()
         mock_db.engine = mock_engine
@@ -84,14 +82,12 @@ class TestSafeCloseWrapper(unittest.TestCase):
         """Test that non-InterfaceError exceptions are not suppressed."""
         # Arrange
         mock_config_obj = Mock()
-        mock_config_obj.configure_mock(
-            **{
-                "get.return_value": None,
-                "DB_INSTANCE_CONNECTION_NAME": None,
-                "DB_USER": "test_user",
-                "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            }
-        )
+        mock_config_obj.configure_mock(**{
+            "get.return_value": None,
+            "DB_INSTANCE_CONNECTION_NAME": None,
+            "DB_USER": "test_user",
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        })
         mock_config.__getitem__.return_value = mock_config_obj
         mock_engine = Mock()
         mock_db.engine = mock_engine
