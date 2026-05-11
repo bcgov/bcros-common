@@ -25,12 +25,13 @@ from notify_delivery import create_app
 class TestAppInitialization(unittest.TestCase):
     """Test suite for app initialization and configuration."""
 
+    @patch("notify_delivery.event")
     @patch("notify_delivery.setup_search_path_event_listener")
     @patch("notify_delivery.register_endpoints")
     @patch("notify_delivery.queue")
     @patch("notify_delivery.db")
     @patch("notify_delivery.config")
-    def test_create_app_basic(self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener):
+    def test_create_app_basic(self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener, mock_event):
         """Test basic app creation."""
         # Arrange
         mock_config_obj = Mock()
@@ -121,13 +122,14 @@ class TestAppInitialization(unittest.TestCase):
             assert "SQLALCHEMY_ENGINE_OPTIONS" in app.config
             mock_db.init_app.assert_called_once_with(app)
 
+    @patch("notify_delivery.event")
     @patch("notify_delivery.setup_search_path_event_listener")
     @patch("notify_delivery.register_endpoints")
     @patch("notify_delivery.queue")
     @patch("notify_delivery.db")
     @patch("notify_delivery.config")
     def test_create_app_with_schema_checkout_event(
-        self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener
+        self, mock_config, mock_db, mock_queue, mock_register, mock_setup_event_listener, mock_event
     ):
         """Test app creation with schema checkout event listener."""
         # Arrange

@@ -16,10 +16,15 @@
 This module is the API for the BC Registries Notify application.
 """
 
+import contextlib
+import signal
+import sys
+
 from cloud_sql_connector import DBConfig, setup_search_path_event_listener
 from flask import Flask
 from flask_cors import CORS
 from flask_migrate import Migrate, upgrade
+from sqlalchemy import event
 from structured_logging import StructuredLogging
 
 from notify_api import models
@@ -74,6 +79,19 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
             # Use the cloud-sql-connector's search path event listener
             if schema and app.config["DB_INSTANCE_CONNECTION_NAME"]:
                 setup_search_path_event_listener(engine, schema)
+
+            # Silently handle teardown errors during Cloud Run scale-down
+            @event.listens_for(engine, "close")
+            def on_close(dbapi_conn, connection_record):
+                with contextlib.suppress(Exception):
+                    dbapi_conn.close()
+
+            # Gracefully dispose pool on SIGTERM before Cloud Run kills the container
+            def graceful_shutdown(signum, frame):
+                engine.dispose(close=False)  # Abandon connections without closing sockets
+                sys.exit(0)
+
+            signal.signal(signal.SIGTERM, graceful_shutdown)
 
     if run_mode == "migration":
         Migrate(app, db)

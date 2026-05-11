@@ -18,9 +18,14 @@ The service worker for applying payments, receipts and account balance to paymen
 
 from __future__ import annotations
 
+import contextlib
+import signal
+import sys
+
 from cloud_sql_connector import DBConfig, setup_search_path_event_listener
 from flask import Flask
 from notify_api.models import db
+from sqlalchemy import event
 from structured_logging import StructuredLogging
 
 from notify_delivery.config import config
@@ -67,6 +72,19 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
         # Use the cloud-sql-connector's search path event listener
         if schema and db_instance_connection_name:
             setup_search_path_event_listener(engine, schema)
+
+        # Silently handle teardown errors during Cloud Run scale-down
+        @event.listens_for(engine, "close")
+        def on_close(dbapi_conn, connection_record):
+            with contextlib.suppress(Exception):
+                dbapi_conn.close()
+
+        # Gracefully dispose pool on SIGTERM before Cloud Run kills the container
+        def graceful_shutdown(signum, frame):
+            engine.dispose(close=False)  # Abandon connections without closing sockets
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, graceful_shutdown)
 
     queue.init_app(app)
 
