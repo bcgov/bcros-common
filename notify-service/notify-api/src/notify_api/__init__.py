@@ -16,14 +16,11 @@
 This module is the API for the BC Registries Notify application.
 """
 
-import contextlib
-import signal
-import sys
-
 from cloud_sql_connector import DBConfig, setup_search_path_event_listener
 from flask import Flask
 from flask_cors import CORS
 from flask_migrate import Migrate, upgrade
+from pg8000.exceptions import InterfaceError
 from sqlalchemy import event
 from structured_logging import StructuredLogging
 
@@ -80,23 +77,18 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
             if schema and app.config["DB_INSTANCE_CONNECTION_NAME"]:
                 setup_search_path_event_listener(engine, schema)
 
-            # Wrap dbapi connection close() to suppress errors during Cloud Run scale-down
+            # Wrap dbapi connection close() to suppress pg8000 errors during Cloud Run scale-down
             @event.listens_for(engine, "connect")
             def on_connect(dbapi_conn, connection_record):
                 original_close = dbapi_conn.close
 
                 def safe_close():
-                    with contextlib.suppress(Exception):
+                    try:
                         original_close()
+                    except InterfaceError:
+                        logger.debug("Suppressed pg8000 InterfaceError on connection close during teardown.")
 
                 dbapi_conn.close = safe_close
-
-            # Gracefully dispose pool on SIGTERM before Cloud Run kills the container
-            def graceful_shutdown(signum, frame):
-                engine.dispose(close=False)  # Abandon connections without closing sockets
-                sys.exit(0)
-
-            signal.signal(signal.SIGTERM, graceful_shutdown)
 
     if run_mode == "migration":
         Migrate(app, db)
