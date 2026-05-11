@@ -149,4 +149,6 @@ class TestAppInitialization(unittest.TestCase):
         # Act
         with patch("notify_delivery.event"):
             create_app("testing")
+
+        # Assert
         mock_setup_event_listener.assert_called_once_with(mock_engine, "test_schema")

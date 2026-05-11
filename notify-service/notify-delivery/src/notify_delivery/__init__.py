@@ -73,11 +73,16 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
         if schema and db_instance_connection_name:
             setup_search_path_event_listener(engine, schema)
 
-        # Silently handle teardown errors during Cloud Run scale-down
-        @event.listens_for(engine, "close")
-        def on_close(dbapi_conn, connection_record):
-            with contextlib.suppress(Exception):
-                dbapi_conn.close()
+        # Wrap dbapi connection close() to suppress errors during Cloud Run scale-down
+        @event.listens_for(engine, "connect")
+        def on_connect(dbapi_conn, connection_record):
+            original_close = dbapi_conn.close
+
+            def safe_close():
+                with contextlib.suppress(Exception):
+                    original_close()
+
+            dbapi_conn.close = safe_close
 
         # Gracefully dispose pool on SIGTERM before Cloud Run kills the container
         def graceful_shutdown(signum, frame):
