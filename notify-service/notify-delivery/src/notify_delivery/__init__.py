@@ -72,7 +72,7 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
 
         # Wrap dbapi connection close() to suppress pg8000 errors during Cloud Run scale-down
         @event.listens_for(engine, "connect")
-        def on_connect(dbapi_conn, connection_record):
+        def on_connect(dbapi_conn, _connection_record):
             original_close = dbapi_conn.close
 
             def safe_close():
