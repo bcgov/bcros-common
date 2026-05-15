@@ -183,6 +183,6 @@ class GoogleStorageService(StorageService):  # pylint: disable=too-few-public-me
             expiration=datetime.timedelta(days=available_days, hours=0, minutes=0),
             method="GET",
             service_account_email=credentials.service_account_email,
-            access_token=credentials.token
+            access_token=credentials.token,
         )
         return url
