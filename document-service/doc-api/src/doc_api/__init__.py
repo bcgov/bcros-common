@@ -40,9 +40,9 @@ def _setup_pg8000_graceful_shutdown(engine) -> None:
     if getattr(engine, "driver", None) != "pg8000":
         return
     try:
-        from pg8000.exceptions import InterfaceError as _InterfaceError
+        from pg8000.exceptions import InterfaceError as _interface_error
     except ImportError:
-        _InterfaceError = None
+        _interface_error = None
 
     @event.listens_for(engine, "connect")
     def on_connect(dbapi_conn, _connection_record):
@@ -52,7 +52,7 @@ def _setup_pg8000_graceful_shutdown(engine) -> None:
             try:
                 orig_close()
             except Exception as exc:
-                if _InterfaceError and isinstance(exc, _InterfaceError):
+                if _interface_error and isinstance(exc, _interface_error):
                     logging.getLogger(__name__).debug("Suppressed pg8000 InterfaceError on teardown.")
                 else:
                     raise
