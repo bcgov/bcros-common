@@ -15,11 +15,13 @@
 
 This module is the API for the BC Registries Document Service application.
 """
+import logging
 import os
 
 from flask import Flask
 from flask_cors import CORS
 from flask_migrate import Migrate, upgrade
+from sqlalchemy import event
 
 from doc_api import errorhandlers, models
 from doc_api.config import config
@@ -31,6 +33,31 @@ from doc_api.utils.auth import jwt
 from doc_api.utils.logging import logger, setup_logging
 
 setup_logging(os.path.join(os.path.abspath(os.path.dirname(__file__)), "logging.yaml"))  # important to do this first
+
+
+def _setup_pg8000_graceful_shutdown(engine) -> None:
+    """Suppress pg8000 InterfaceError on connection close during Cloud Run scale-down."""
+    if getattr(engine, "driver", None) != "pg8000":
+        return
+    try:
+        from pg8000.exceptions import InterfaceError as _InterfaceError
+    except ImportError:
+        _InterfaceError = None
+
+    @event.listens_for(engine, "connect")
+    def on_connect(dbapi_conn, _connection_record):
+        orig_close = dbapi_conn.close
+
+        def safe_close():
+            try:
+                orig_close()
+            except Exception as exc:
+                if _InterfaceError and isinstance(exc, _InterfaceError):
+                    logging.getLogger(__name__).debug("Suppressed pg8000 InterfaceError on teardown.")
+                else:
+                    raise
+
+        dbapi_conn.close = safe_close
 
 
 def create_app(service_environment=APP_RUNNING_ENVIRONMENT, **kwargs):
@@ -61,6 +88,9 @@ def create_app(service_environment=APP_RUNNING_ENVIRONMENT, **kwargs):
     queue_service.init_app(app)
 
     setup_jwt_manager(app, jwt)
+
+    with app.app_context():
+        _setup_pg8000_graceful_shutdown(db.engine)
 
     register_shellcontext(app)
     return app
