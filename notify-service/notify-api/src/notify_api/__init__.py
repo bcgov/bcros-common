@@ -74,7 +74,6 @@ def create_app(run_mode: str = APP_RUNNING_ENVIRONMENT) -> Flask:
             # Use the cloud-sql-connector's search path event listener
             if schema and app.config["DB_INSTANCE_CONNECTION_NAME"]:
                 setup_search_path_event_listener(engine, schema)
-                setup_pg8000_close_event_listener(engine)
 
             # Suppress pg8000 InterfaceError on connection close during teardown
             setup_pg8000_close_event_listener(engine)
