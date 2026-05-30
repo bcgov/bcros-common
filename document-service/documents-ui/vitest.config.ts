@@ -13,6 +13,19 @@ export default defineVitestConfig({
       }
     },
     setupFiles: ['./tests/setup.ts'],
-    globals: true
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      enabled: true,
+      reporter: ['text', ['cobertura', { file: 'coverage.xml' }]],
+      reportsDirectory: './tests/coverage',
+      // Only measure testable utility files; exclude API layer, composables, stores,
+      // pages, layouts, and other files requiring full browser/server context.
+      include: ['src/utils/**/*.ts'],
+      exclude: [
+        'src/utils/documentRequests.ts',
+        'src/utils/breadcrumbs.ts'
+      ]
+    }
   }
 })
