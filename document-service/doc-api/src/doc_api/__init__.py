@@ -64,7 +64,8 @@ def create_app(service_environment=APP_RUNNING_ENVIRONMENT, **kwargs):
     setup_jwt_manager(app, jwt)
 
     with app.app_context():
-        setup_pg8000_close_event_listener(db.engine)
+        if app.config.get("CLOUDSQL_INSTANCE_CONNECTION_NAME"):  # pragma: no cover
+            setup_pg8000_close_event_listener(db.engine)
 
     register_shellcontext(app)
     return app
