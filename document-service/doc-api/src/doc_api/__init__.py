@@ -45,9 +45,9 @@ def create_app(service_environment=APP_RUNNING_ENVIRONMENT, **kwargs):
 
     db.init_app(app)
     Migrate(app, db)
-    
+
     deployment_env = app.config.get("DEPLOYMENT_ENV", "")
-    
+
     if deployment_env == "testing":  # CI only run upgrade for unit testing.
         logger.info("Running migration upgrade.")
         with app.app_context():
@@ -57,7 +57,7 @@ def create_app(service_environment=APP_RUNNING_ENVIRONMENT, **kwargs):
         logger.info("Finished migration upgrade.")
     else:
         logger.info("Logging, migrate set up.")
-    
+
     # Skip service initialization for migration jobs
     if deployment_env != "migration":
         auth_service.init_app(app)
