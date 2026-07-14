@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   },
   ssr: false,
   extends: [
-    ['github:bcgov/business-dashboard-ui#v0.0.1', { install: true }]
+    ['github:bcgov/business-dashboard-ui#v0.0.1', { install: false }]
   ],
   imports: {
     dirs: ['enums', 'interfaces', 'stores']

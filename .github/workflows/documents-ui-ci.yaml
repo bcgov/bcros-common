@@ -18,3 +18,4 @@ jobs:
       working_directory: "./document-service/documents-ui"
       codecov_flag: "documentsui"
       node_version: "24"
+      pnpm_version: 11.9.0
