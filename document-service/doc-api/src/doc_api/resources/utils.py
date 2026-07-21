@@ -611,7 +611,7 @@ def get_doc_links(info: RequestInfo, results: list) -> list:
 
 def get_doc_data(info: RequestInfo, results: list) -> list:
     """Retrieve document binary data for the first document in the list. Conditionally add certified copy stamp."""
-    if not results:
+    if not results or not results[0].get("documentURL"):
         return results
     result = results[0]
     storage_name = result.get("documentURL")

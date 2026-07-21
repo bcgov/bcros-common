@@ -99,7 +99,7 @@ class GoogleAuthService(AuthService):  # pylint: disable=too-few-public-methods
             return cls.get_credentials()
 
         # Load default credentials
-        credentials, project = google.auth.default()
+        credentials, project = google.auth.default()  # pylint: disable=unused-variable; gcp api response
         # Refresh credentials to ensure an access token is available
         auth_request = google.auth.transport.requests.Request()
         credentials.refresh(auth_request)

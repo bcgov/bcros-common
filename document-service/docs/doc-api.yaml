@@ -2189,8 +2189,9 @@ components:
           productCode: BUSINESS
     coopDocumentType:
       type: string
-      description: The type of COOP class document. One of <ul><li>ANNR - Annual Report</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>COFI - Correction Filing</li><li>CONT - Consent</li><li>COOP_MEMORANDUM - Cooperative Memorandum</li><li>COOP_RULES - Cooperative Rules</li><li>CORR - Correspondence</li><li>COSD - Supporting Documentation</li><li>FILE - COLIN Filing</li><li>RSRI - Restoration/Reinstatement</li></ul>
+      description: The type of COOP class document. One of <ul><li>AFDV - Affidavit Document</li><li>ANNR - Annual Report</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>COFI - Correction Filing</li><li>CONT - Consent</li><li>COOP_MEMORANDUM - Cooperative Memorandum</li><li>COOP_RULES - Cooperative Rules</li><li>CORR - Correspondence</li><li>COSD - Client Supporting Documentation</li><li>CRTO - Court Orders</li><li>FILE - Filing Document</li><li>RSRI - Restoration/Reinstatement</li></ul>
       enum:
+        - AFDV
         - ANNR
         - CLW
         - COFI
@@ -2199,12 +2200,13 @@ components:
         - COOP_RULES
         - CORR
         - COSD
+        - CRTO
         - FILE
         - RSRI
       example: FILE
     corpDocumentType:
       type: string
-      description: The type of CORP class document. One of <ul><li>ADDR - Address</li><li>AGMAM - AGM Amendment</li><li>AGMEX - AGM Extension</li><li>AGMLC - AGM Location Change</li><li>AMAL - Update Due to Amalgamation</li><li>AMLG - Amalgamations</li><li>AMLO - Amalgamation Out</li><li>ANNR - Annual Report</li><li>APCO - Application to Correct the Registry</li><li>ASNU - Assumed Name Undertaking</li><li>ATTN - Attorney</li><li>CERT - Certificates</li><li>CHANGE_NAME - Change of Name</li><li>CHANGE_OFF - Change of Officers</li><li>CHANGE_REG - Change of Registration</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNTA - Continuation in Authorization</li><li>CNTI - Continuation In</li><li>CNTO - Continuation Out</li><li>CNVS - Conversions</li><li>CNV_LEDGER - Conversion Ledger</li><li>COFF - CORPS Filed Forms</li><li>COMP - CERTIFICATE OF COMPANIES</li><li>CONS - NR Consent Letter</li><li>CONT - Consent</li><li>CORC - Corrections</li><li>CORP_AFFIDAVIT - Affidavit</li><li>CORR - Correspondence</li><li>COSD - CORPS Supporting Documentation</li><li>COU - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRT - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRTO - Court Orders</li><li>CRTO_LIQ - Court Ordered Liquidation</li><li>DIRECTOR_AFFIDAVIT - Director Affidavit</li><li>DIRS - Directors</li><li>DISD - Dissolution Delays</li><li>DISS_VOL - Voluntary Dissolution</li><li>DISS_ADMIN - Administrative Dissolution</li><li>ICORP - Incorporation Application</li><li>INTENT_LIQ - Intent to Liquidate</li><li>INV - <b>INACTIVE/DEPRECATED</b> Investigation</li><li>FILE - COLIN Filing</li><li>FINM - Financial Management</li><li>FRMA - Form 2's Address Change for Corps</li><li>FZE_ADMIN - Admin Freeze</li><li>LTR - Letter Templates</li><li>MNOR - Minister's Order</li><li>NOALA - Notice of Alteration</li><li>NWITH - Notice of Withdrawal</li><li>OTHER_LEGACY - Legacy Other</li><li>PART - <b>INACTIVE/DEPRECATED</b> Partnerships</li><li>PB_OFF - Put Back Off</li><li>PB_ON - Put Back On</li><li>PLNA - Plan of Arrangements</li><li>PRE - <b>INACTIVE/DEPRECATED</b> Pre Image Documents</li><li>RECV_APPOINT - Appointment of Receiver or Receiver Manager </li><li>RECV_CEASE - Cease a Receiver or Receiver Manager</li><li>REG_BUS - Registration</li><li>REGN - Registrar's Notation</li><li>REGO - Registrar's Order</li><li>RSLN_SPEC - Special Resolution</li><li>RSRI - Restoration/Reinstatement</li><li>SUPP - Supporting Documents</li><li>SYSR - System is the record</li><li>TRANSITION - Transition Application</li><li>TRANSP_REG - Transparency Registration</li></ul>
+      description: The type of CORP class document. One of <ul><li>ADDR - Address</li><li>AGMAM - AGM Amendment</li><li>AGMEX - AGM Extension</li><li>AGMLC - AGM Location Change</li><li>AMAL - Update Due to Amalgamation</li><li>AMLG - Amalgamations</li><li>AMLO - Amalgamation Out</li><li>ANNR - Annual Report</li><li>APCO - Application to Correct the Registry</li><li>ASNU - Assumed Name Undertaking</li><li>ATTN - Attorney</li><li>CERT - Certificates</li><li>CHANGE_NAME - Change of Name</li><li>CHANGE_OFF - Change of Officers</li><li>CHANGE_REG - Change of Registration</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNTA - Continuation in Authorization</li><li>CNTI - Continuation In</li><li>CNTO - Continuation Out</li><li>CNVS - Conversions</li><li>CNV_LEDGER - Conversion Ledger</li><li>COFF - CORPS Filed Forms</li><li>COMP - CERTIFICATE OF COMPANIES</li><li>CONS - NR Consent Letter</li><li>CONT - Consent</li><li>CORC - Corrections</li><li>CORP_AFFIDAVIT - Affidavit</li><li>CORR - Correspondence</li><li>COSD - Client Supporting Documentation</li><li>COU - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRT - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRTO - Court Orders</li><li>CRTO_LIQ - Court Ordered Liquidation</li><li>DIRECTOR_AFFIDAVIT - Director Affidavit</li><li>DIRS - Directors</li><li>DISD - Dissolution Delays</li><li>DISS_VOL - Voluntary Dissolution</li><li>DISS_ADMIN - Administrative Dissolution</li><li>ICORP - Incorporation Application</li><li>INTENT_LIQ - Intent to Liquidate</li><li>INV - <b>INACTIVE/DEPRECATED</b> Investigation</li><li>FILE - Filing Document</li><li>FINM - Financial Management</li><li>FRMA - Form 2's Address Change for Corps</li><li>FZE_ADMIN - Admin Freeze</li><li>LTR - Letter Templates</li><li>MNOR - Minister's Order</li><li>NOALA - Notice of Alteration</li><li>NWITH - Notice of Withdrawal</li><li>OTHER_LEGACY - Legacy Other</li><li>PART - <b>INACTIVE/DEPRECATED</b> Partnerships</li><li>PB_OFF - Put Back Off</li><li>PB_ON - Put Back On</li><li>PLNA - Plan of Arrangements</li><li>PRE - <b>INACTIVE/DEPRECATED</b> Pre Image Documents</li><li>RECV_APPOINT - Appointment of Receiver or Receiver Manager </li><li>RECV_CEASE - Cease a Receiver or Receiver Manager</li><li>REG_BUS - Registration</li><li>REGN - Registrar's Notation</li><li>REGO - Registrar's Order</li><li>RSLN_SPEC - Special Resolution</li><li>RSRI - Restoration/Reinstatement</li><li>SUPP - Supporting Documents</li><li>SYSR - System is the record</li><li>TRANSITION - Transition Application</li><li>TRANSP_REG - Transparency Registration</li></ul>
       enum:
         - ADDR
         - AGMAM
@@ -2454,7 +2456,7 @@ components:
       type: string
       x-stoplight:
         id: f75e6f4d53019
-      description: The type of Firm document. One of <ul><li>ADDR - Address</li><li>ANNR - Annual Report</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNVF - Conversion of Firm</li><li>CONT - Consent</li><li>COPN - Change of Proprietor's Name</li><li>CORR - Correspondence</li><li>DISS - Dissolution Due to Death</li><li>FILE - COLIN Filing</li><li>PART - Partnerships</li></ul>
+      description: The type of Firm document. One of <ul><li>ADDR - Address</li><li>ANNR - Annual Report</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNVF - Conversion of Firm</li><li>CONT - Consent</li><li>COPN - Change of Proprietor's Name</li><li>CORR - Correspondence</li><li>CRTO - Court Orders</li><li>DISS - Dissolution Due to Death</li><li>FILE - Filing Document</li><li>PART - Partnerships</li></ul>
       enum:
         - ADDR
         - ANNR
@@ -2463,13 +2465,14 @@ components:
         - CONT
         - COPN
         - CORR
+        - CRTO
         - DISS
         - FILE
         - PART
       example: CORR
     lpllpDocumentType:
       type: string
-      description: The type of LP_LLP class document. One of <ul><li>ADDR - Address</li><li>ANNR - Annual Report</li><li>ATTN - Attorney</li><li>CHNM - Change Of Name</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNVF - Conversion of Firm</li><li>CONT - Consent</li><li>CORR - Correspondence</li><li>FILE - COLIN Filing</li><li>LPRG - LP and LLP Registration</li><li>PART - Partnerships</li></ul>
+      description: The type of LP_LLP class document. One of <ul><li>ADDR - Address</li><li>ANNR - Annual Report</li><li>ATTN - Attorney</li><li>CHNM - Change Of Name</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNVF - Conversion of Firm</li><li>CONT - Consent</li><li>CORR - Correspondence</li><li>FILE - Filing Document</li><li>LPRG - LP and LLP Registration</li><li>PART - Partnerships</li></ul>
       enum:
         - ADDR
         - ANNR
@@ -2992,7 +2995,7 @@ components:
           results: []
     societyDocumentType:
       type: string
-      description: The type of SOCIETY class document. One of <ul><li>ADDR - Address</li><li>AFDV - Affidavit Document</li><li>AMAL - Update Due to Amalgamation</li><li>AMLG - <b>INACTIVE/DEPRECATED</b> Amalgamations</li><li>ANNR - Annual Report</li><li>APCO - Application to Correct the Registry</li><li>ASNU - <b>INACTIVE/DEPRECATED</b> Assumed Name Undertaking</li><li>ATTN - <b>INACTIVE/DEPRECATED</b> Attorney</li><li>BYLT - Bylaw Alterations</li><li>BYLW - Bylaw</li><li>CERT - Certificates</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNST - Constitution</li><li>CNTA - <b>INACTIVE/DEPRECATED</b> Continuation in Authorization</li><li>CNTI - Continuation In</li><li>CNVS - Conversions</li><li>CONT - Consent</li><li>CORC - Corrections</li><li>CORR - Correspondence</li><li>COSD - CORPS Supporting Documentation</li><li>CRT - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRTO - Court Orders</li><li>DIRS - Directors</li><li>DISD - <b>INACTIVE/DEPRECATED</b> Dissolution Delays</li><li>FILE - <b>INACTIVE/DEPRECATED</b> Filing</li><li>FRMA - Form 2's Address Change for Corps</li><li>LTR - <b>INACTIVE/DEPRECATED</b> Letter Templates</li><li>MNOR - <b>INACTIVE/DEPRECATED</b> Minister's Order</li><li>OTP - Other</li><li>PLNA - <b>INACTIVE/DEPRECATED</b> Plan of Arrangements</li><li>REGN - Registrar's Notation</li><li>REGO - Registrar's Order</li><li>RSLN - Resolution Document</li><li>RSRI - Restoration/Reinstatement</li><li>SOCF - Society Filing</li><li>SUPP - Supporting Documents</li><li>SYSR - System is the record</li></ul>
+      description: The type of SOCIETY class document. One of <ul><li>ADDR - Address</li><li>AFDV - Affidavit Document</li><li>AMAL - Update Due to Amalgamation</li><li>AMLG - <b>INACTIVE/DEPRECATED</b> Amalgamations</li><li>ANNR - Annual Report</li><li>APCO - Application to Correct the Registry</li><li>ASNU - <b>INACTIVE/DEPRECATED</b> Assumed Name Undertaking</li><li>ATTN - <b>INACTIVE/DEPRECATED</b> Attorney</li><li>BYLT - Bylaw Alterations</li><li>BYLW - Bylaw</li><li>CERT - Certificates</li><li>CLW - <b>INACTIVE/DEPRECATED</b> Client Letters</li><li>CNST - Constitution</li><li>CNTA - <b>INACTIVE/DEPRECATED</b> Continuation in Authorization</li><li>CNTI - Continuation In</li><li>CNVS - Conversions</li><li>CONT - Consent</li><li>CORC - Corrections</li><li>CORR - Correspondence</li><li>COSD - Client Supporting Documentation</li><li>CRT - <b>INACTIVE/DEPRECATED</b> Court Order</li><li>CRTO - Court Orders</li><li>DIRS - Directors</li><li>DISD - <b>INACTIVE/DEPRECATED</b> Dissolution Delays</li><li>FILE - <b>INACTIVE/DEPRECATED</b> Filing Document</li><li>FRMA - Form 2's Address Change for Corps</li><li>LTR - <b>INACTIVE/DEPRECATED</b> Letter Templates</li><li>MNOR - <b>INACTIVE/DEPRECATED</b> Minister's Order</li><li>OTP - Other</li><li>PLNA - <b>INACTIVE/DEPRECATED</b> Plan of Arrangements</li><li>REGN - Registrar's Notation</li><li>REGO - Registrar's Order</li><li>RSLN - Resolution Document</li><li>RSRI - Restoration/Reinstatement</li><li>SOCF - Society Filing</li><li>SUPP - Supporting Documents</li><li>SYSR - System is the record</li></ul>
       enum:
         - ADDR
         - AFDV
