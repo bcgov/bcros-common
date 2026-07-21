@@ -69,6 +69,9 @@ TEST_DOC_TYPE_CLASSES = [
     (DocumentClasses.CORP.value, DocumentTypes.RECV_APPOINT.value, True, True),
     (DocumentClasses.CORP.value, DocumentTypes.INTENT_LIQ.value, True, True),
     (DocumentClasses.CORP.value, DocumentTypes.REG_BUS.value, True, True),
+    (DocumentClasses.COOP.value, DocumentTypes.AFDV.value, True, True),
+    (DocumentClasses.COOP.value, DocumentTypes.CRTO.value, True, True),
+    (DocumentClasses.FIRM.value, DocumentTypes.CRTO.value, True, True),
 ]
 # testdata pattern is ({doc_class}, {exists})
 TEST_DOC_CLASSES = [

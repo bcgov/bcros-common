@@ -61,6 +61,8 @@ def get_searches_by_class(doc_class: str):
             logger.info(f"No results found for request {req_json}.")
             return resource_utils.not_found_error_response("search documents information", account_id)
         if info.document_service_id and resource_utils.is_pdf(request) and len(response_json) == 1:
+            if not response_json[0].get("data"):
+                return resource_utils.not_found_error_response("document", info.document_service_id)
             return response_json[0].get("data"), HTTPStatus.OK, CONTENT_PDF
         return jsonify(response_json), HTTPStatus.OK, CONTENT_JSON
     except DatabaseException as db_exception:
