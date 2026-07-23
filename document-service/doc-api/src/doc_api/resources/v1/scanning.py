@@ -167,8 +167,9 @@ def get_document_classes():
             return resource_utils.not_found_error_response("GET scanning document classes", account_id)
         response_json = []
         for result in results:
-            if result.active:
-                response_json.append(result.scanning_json)
+            class_json = result.scanning_json
+            class_json["documentTypes"] = DocumentType.find_all_scanning_class_json(class_json.get("documentClass"))
+            response_json.append(class_json)
         logger.info(f"get_document_classes returning array of length {len(response_json)}")
         return jsonify(response_json), HTTPStatus.OK
     except DatabaseException as db_exception:
@@ -198,7 +199,7 @@ def get_document_types():
             return resource_utils.not_found_error_response("GET scanning document types", account_id)
         response_json = []
         for result in results:
-            if result.active:
+            if result.application_id and str(result.application_id).find("SCAN") >= 0:
                 response_json.append(result.scanning_json)
         logger.info(f"get_document_types returning array of length {len(response_json)}")
         return jsonify(response_json), HTTPStatus.OK
