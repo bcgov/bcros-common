@@ -76,6 +76,7 @@ TEST_DOC_TYPE_CLASSES = [
 # testdata pattern is ({doc_class}, {exists})
 TEST_DOC_CLASSES = [
     ("XXX", False),
+    (DocumentClasses.COOP.value, True),
     (DocumentClasses.CORP.value, True),
     (DocumentClasses.SOCIETY.value, True),
     (DocumentClasses.NR.value, True),
@@ -83,7 +84,21 @@ TEST_DOC_CLASSES = [
     (DocumentClasses.MHR.value, True),
     (DocumentClasses.FIRM.value, True),
     (DocumentClasses.OTHER.value, True),
+    (DocumentClasses.LP_LLP.value, True),
+    (DocumentClasses.XP.value, True),
     (DocumentClasses.DELETED.value, False)
+]
+# testdata pattern is ({doc_class}, {count})
+TEST_DOC_TYPES_SCANNING_CLASS_JSON = [
+    (DocumentClasses.COOP.value, 9),
+    (DocumentClasses.CORP.value, 32),
+    (DocumentClasses.SOCIETY.value, 26),
+    (DocumentClasses.NR.value, 3),
+    (DocumentClasses.PPR.value, 6),
+    (DocumentClasses.MHR.value, 53),
+    (DocumentClasses.FIRM.value, 9),
+    (DocumentClasses.OTHER.value, 5),
+    (DocumentClasses.LP_LLP.value, 9),
 ]
 # testdata pattern is ({doc_class}, {type_count})
 TEST_DOC_TYPE_CLASSES_ALL = [
@@ -173,6 +188,7 @@ def test_document_class_findall_scanning(session):
         class_json = result.scanning_json
         assert class_json.get("ownerType")
         assert class_json.get("documentClass")
+        assert class_json.get("documentClass") not in ("XP", "DELETED")
         assert class_json.get("documentClassDescription")
         assert "active" in class_json
         assert "scheduleNumber" in class_json
@@ -190,17 +206,33 @@ def test_document_type_findall(session):
         assert result.product
 
 
+@pytest.mark.parametrize("doc_class,count", TEST_DOC_TYPES_SCANNING_CLASS_JSON)
+def test_document_type_scanning_json(session, doc_class, count):
+    """Assert that the DocumentType.find_all_scanning_class_json() works as expected."""
+    results = type_tables.DocumentType.find_all_scanning_class_json(doc_class)
+    assert results
+    assert len(results) >= count
+    for result in results:
+        assert str(result.get("applicationId")).find("/SCAN") == -1
+
+
 def test_document_type_findall_scanning(session):
     """Assert that the DocumentType.find_all_scanning() and DocumentType.scanning_json work as expected."""
-    results = type_tables.DocumentType.find_all()
+    results = type_tables.DocumentType.find_all_scanning()
     assert results
     assert len(results) >= 90
     for result in results:
         type_json = result.scanning_json
         assert type_json.get("documentType")
+        assert type_json.get("documentType") not in ("CORP_AFFIDAVIT", "DIRECTOR_AFFIDAVIT")
         assert type_json.get("documentTypeDescription")
         assert "active" in type_json
         assert type_json.get("applicationId")
+        if result.application_id:
+            if result.application_id.find("SCAN") < 0:
+                print(f"{result.document_type} = {result.application_id}")
+            assert result.application_id.find("SCAN") >= 0
+            assert str(type_json.get("applicationId")).find("/SCAN") == -1
 
 
 @pytest.mark.parametrize("doc_type, doc_class, exists", TEST_DOC_TYPES)
