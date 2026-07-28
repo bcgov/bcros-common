@@ -25,6 +25,7 @@ from doc_api.resources.request_info import RequestInfo
 from doc_api.utils.logging import logger
 
 POST_REC_REQUEST_PATH = "/callbacks/document-records"
+PATCH_REC_REQUEST_PATH = "/callbacks/update/document-records"
 
 bp = Blueprint("CALLBACKS1", __name__, url_prefix="/callbacks")  # pylint: disable=invalid-name
 
@@ -77,3 +78,64 @@ def post_document_records():
         return resource_utils.business_exception_response(exception)
     except Exception as default_exception:  # noqa: B902; return nicer default error
         return resource_utils.default_exception_response(default_exception)
+
+
+@bp.route("/update/document-records", methods=["POST", "OPTIONS"])
+def update_document_records():
+    """Update document record information for an existing document."""
+    doc_service_id: str = ""
+    account_id: str = ""
+    try:
+        req_path: str = PATCH_REC_REQUEST_PATH
+        info: RequestInfo = RequestInfo(RequestTypes.UPDATE, req_path, None, None)
+        request_json = json.loads(request.get_data().decode("utf-8"))
+        if request_json.get("data"):
+            logger.info(f"{req_path} payload wrapped: using data.")
+            request_json = request_json.get("data")
+        request_json = build_update_json(request_json)
+        info = resource_utils.get_callback_request_info(request_json, info)
+        account_id = info.account_id
+        doc_service_id = request_json.get(resource_utils.PARAM_DOC_SERVICE_ID)
+        logger.info(f"Starting new callback update document record request payload={request_json}")
+        # Authenticate with request subscription api key
+        if not resource_utils.valid_api_key(request):
+            return resource_utils.unauthorized_error_response("Update record callback missing api key")
+        if not doc_service_id:
+            logger.error(f"{req_path} missing payload DRS ID fileKey or documentServiceId.")
+            # No point retrying with this payload
+            return resource_utils.bad_request_response(f"{req_path} missing DRS ID fileKey or documentServiceId.")
+
+        document: Document = Document.find_by_doc_service_id(doc_service_id)
+        if not document:
+            logger.error(f"{req_path} no record found for DRS ID={doc_service_id}")
+            # No point retrying with this payload
+            return resource_utils.not_found_error_response("PATCH document information", doc_service_id)
+
+        response_json = resource_utils.save_callback_update_rec(info, document)
+        return jsonify(response_json), HTTPStatus.OK
+    except DatabaseException as db_exception:
+        return resource_utils.db_exception_response(
+            db_exception, account_id, f"POST update callback document record id={doc_service_id}"
+        )
+    except BusinessException as exception:
+        return resource_utils.business_exception_response(exception)
+    except Exception as default_exception:  # noqa: B902; return nicer default error
+        return resource_utils.default_exception_response(default_exception)
+
+
+def build_update_json(request_json: dict) -> dict:
+    """Build the DRS record update json from the callback payload."""
+    if not request_json.get(resource_utils.PARAM_DOC_SERVICE_ID) and request_json.get("fileKey"):
+        filekey: str = str(request_json.get("fileKey"))
+        if filekey.find("-") > 0:
+            tokens = filekey.split("-")
+            request_json[resource_utils.PARAM_DOC_SERVICE_ID] = tokens[1]
+        else:
+            request_json[resource_utils.PARAM_DOC_SERVICE_ID] = filekey
+    if not request_json.get(resource_utils.PARAM_CONSUMER_FILEDATE) and request_json.get("filingDate"):
+        request_json[resource_utils.PARAM_CONSUMER_FILEDATE] = request_json.get("filingDate")
+    if not request_json.get(resource_utils.PARAM_CONSUMER_IDENTIFIER) and request_json.get("businessIdentifier"):
+        request_json[resource_utils.PARAM_CONSUMER_IDENTIFIER] = request_json.get("businessIdentifier")
+    if not request_json.get(resource_utils.PARAM_CONSUMER_REFERENCE_ID) and request_json.get("filingId"):
+        request_json[resource_utils.PARAM_CONSUMER_REFERENCE_ID] = str(request_json.get("filingId"))
+    return request_json
