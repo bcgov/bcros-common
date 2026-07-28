@@ -14,10 +14,23 @@
 """This module holds model definitions for the MHR type tables."""
 from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
+from sqlalchemy.sql import text
 
 from doc_api.utils.base import BaseEnum
+from doc_api.utils.logging import logger
 
 from .db import db
+
+QUERY_SCANNING_DOC_TYPES = """
+select dt.document_type, dt.document_type_desc, dt.active, dt.application_id
+  from document_type_classes dtc, document_types dt
+ where dtc.document_class = :query_value1
+   and dtc.active
+   and dtc.document_type = dt.document_type
+   and dt.active
+   and dt.application_id like '%SCAN%'
+ order by dt.document_type::text
+"""
 
 
 class RequestTypes(BaseEnum):
@@ -263,19 +276,27 @@ class DocumentClass(db.Model):  # pylint: disable=too-few-public-methods
     @property
     def scanning_json(self) -> dict:
         """Return the document class as a scanning json object."""
-        doc_type = {
+        doc_class = {
             "ownerType": self.scanning_owner_type if self.scanning_owner_type else "",
             "documentClass": self.document_class,
             "documentClassDescription": self.document_class_desc,
             "active": bool(self.active) if self.active is not None else True,
             "scheduleNumber": self.schedule_number if self.schedule_number else 0,
         }
-        return doc_type
+        return doc_class
 
     @classmethod
     def find_all_scanning(cls):
-        """Return all the type records for the scanning application."""
-        return db.session.query(DocumentClass).order_by(DocumentClass.scanning_owner_type).all()
+        """
+        Return all the active document class records for the scanning application. Include active document
+        types where the application id is SCAN.
+        """
+        return (
+            db.session.query(DocumentClass)
+            .filter(DocumentClass.active)
+            .order_by(DocumentClass.scanning_owner_type)
+            .all()
+        )
 
     @classmethod
     def find_all(cls):
@@ -315,14 +336,45 @@ class DocumentType(db.Model):  # pylint: disable=too-few-public-methods
             "documentType": self.document_type,
             "documentTypeDescription": self.document_type_desc,
             "active": bool(self.active) if self.active is not None else True,
-            "applicationId": self.application_id if self.application_id else "",
+            "applicationId": str(self.application_id).replace("/SCAN", "") if self.application_id else "",
         }
         return doc_type
 
     @classmethod
     def find_all_scanning(cls):
         """Return all the type records for the scanning application."""
-        return db.session.query(DocumentType).order_by(DocumentType.document_type).all()
+        return (
+            db.session.query(DocumentType)
+            .filter(and_(DocumentType.application_id.like("%SCAN%"), DocumentType.active))
+            .order_by(DocumentType.document_type)
+            .all()
+        )
+
+    @classmethod
+    def find_all_scanning_class_json(cls, doc_class: str) -> list:
+        """
+        Return the set of scanning application document types belonging to a document class,
+        where the class is active, document type is active, and the document type is identified
+        as a scanner type by the application_id. Sort by document type.
+        """
+        doc_types = []
+        if doc_class:
+            try:
+                query = text(QUERY_SCANNING_DOC_TYPES)
+                results = db.session.execute(query, {"query_value1": doc_class})
+                rows = results.fetchall()
+                if rows is not None:
+                    for row in rows:
+                        doc_type = {
+                            "documentType": str(row[0]),
+                            "documentTypeDescription": str(row[1]),
+                            "active": bool(row[2]) if row[2] else True,
+                            "applicationId": str(row[3]).replace("/SCAN", "") if row[3] else "",
+                        }
+                        doc_types.append(doc_type)
+            except Exception as db_exception:  # noqa: B902; return nicer error
+                logger.error(f"DB find_all_scanning_class_json exception: {db_exception}")
+        return doc_types
 
     @classmethod
     def find_all(cls):

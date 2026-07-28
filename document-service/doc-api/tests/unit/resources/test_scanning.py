@@ -333,8 +333,10 @@ def test_get_classes(session, client, jwt, desc, roles, account, status):
             assert class_json.get("ownerType")
             assert class_json.get("documentClass")
             assert class_json.get("documentClassDescription")
-            assert "active" in class_json
             assert "scheduleNumber" in class_json
+            assert class_json.get("active")
+            assert class_json.get("documentClass") not in ("XP", "DELETED")
+            assert class_json.get("documentTypes")
 
 
 @pytest.mark.parametrize("desc,roles,account,status", TEST_GET_DATA_TYPES)
@@ -358,7 +360,7 @@ def test_get_types(session, client, jwt, desc, roles, account, status):
         for type_json in results_json:
             assert type_json.get("documentType")
             assert type_json.get("documentTypeDescription")
-            assert "active" in type_json
+            assert type_json.get("active")
             assert type_json.get("applicationId")
 
 

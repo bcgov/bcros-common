@@ -305,7 +305,10 @@ def migrate_recent_reports(config: Config, rows: list):
             report_count += int(row[3])
             error_count += int(row[4])
             summary_json.extend(list(row[5]))
-            Database.update_company_migration(corp_num, report_count, error_count, summary_json)
+            if summary_json and summary_json[0].get("warning_message"):
+                Database.update_company_migration_no_ts(corp_num, report_count, error_count, summary_json)
+            else:
+                Database.update_company_migration(corp_num, report_count, error_count, summary_json)
         except Exception as report_err:
             logger.error(f"Job {config.JOB_ID} unexpected error for corp_num={corp_num}: {report_err}")
             total_error_count += 1

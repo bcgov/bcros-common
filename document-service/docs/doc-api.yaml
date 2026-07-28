@@ -1554,7 +1554,7 @@ paths:
       tags:
         - documents
       summary: Get scanning application document classes.
-      description: <p> Intended for use by the Registries document scanning application to get the list of active document classes in the application sort order.</p>
+      description: <p>Intended for use by the Registries document scanning application to get the list of active document classes in the application sort order. For convenience, a list of active document types identified as scanning types and sorted by document type is included in the response for each document class as the documentTypes property.</p>
       operationId: get-scanning-doc-classes
       parameters:
         - $ref: '#/components/parameters/accountId'
@@ -1578,28 +1578,80 @@ paths:
                   $ref: '#/components/schemas/scanningDocumentClass'
               examples:
                 /api/v1/scanning/document-classes/get:
-                  summary: Retrieve scanning document classes response.
+                  summary: Retrieve scanning document classes (incomplete example) response.
                   value:
                     - active: true
                       documentClass: COOP
                       documentClassDescription: Cooperatives
                       ownerType: COOP
-                      scheduleNumber: 0
+                      scheduleNumber: 8001
+                      documentTypes:
+                        - active: true
+                          applicationID: REGI
+                          documentType: AFDV
+                          documentTypeDescription: Affidavit Document
+                        - active: true
+                          applicationID: SCAN
+                          documentType: ADDR
+                          documentTypeDescription: Address
                     - active: true
                       documentClass: CORP
                       documentClassDescription: Corporations
                       ownerType: CORP
-                      scheduleNumber: 0
+                      scheduleNumber: 30
+                      documentTypes:
+                        - active: true
+                          applicationID: SCAN
+                          documentType: ADDR
+                          documentTypeDescription: Address
+                        - active: true
+                          applicationID: SCAN
+                          documentType: AMAL
+                          documentTypeDescription: Update Due to Amalgamation
                     - active: true
                       documentClass: FIRM
                       documentClassDescription: Firms
                       ownerType: FIRM
-                      scheduleNumber: 0
+                      scheduleNumber: 8004
+                      documentTypes:
+                        - active: true
+                          applicationID: SCAN
+                          documentType: ADDR
+                          documentTypeDescription: Address
+                        - active: true
+                          applicationID: SCAN
+                          documentType: ANNR
+                          documentTypeDescription: Annual Report
                     - active: true
                       documentClass: MHR
                       documentClassDescription: Manufactured Home Registry
                       ownerType: MHR
-                      scheduleNumber: 0
+                      scheduleNumber: 4029
+                      documentTypes:
+                        - active: true
+                          applicationID: MHR
+                          documentType: ABAN
+                          documentTypeDescription: TRANSFER DUE TO ABANDONMENT AND SALE
+                        - active: true
+                          applicationID: MHR
+                          documentType: ADDI
+                          documentTypeDescription: ADDITION
+                        - active: true
+                          applicationID: REGI
+                          documentType: AFDV
+                          documentTypeDescription: 'Affidavit Document'
+                        - active: true
+                          applicationID: MHR
+                          documentType: AFFE
+                          documentTypeDescription: 'TRANSFER TO EXECUTOR – ESTATE UNDER $25,000 WITH WILL'
+                        - active: true
+                          applicationID: MHR
+                          documentType: ATTA
+                          documentTypeDescription: ATTACHMENT
+                        - active: true
+                          applicationID: MHR
+                          documentType: BANK
+                          documentTypeDescription: TRANSFER DUE TO BANKRUPTCY
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2828,20 +2880,50 @@ components:
           type: string
           description: The legacy scanning application owner type if available that maps to the document class.
           example: CORP
-        sequenceNumber:
+        scheduleNumber:
           type: integer
-          description: The legacy scanning application sequence number if available that maps to the document class.
-          example: 0
+          description: The legacy scanning application box schedule number if available that maps to the document class.
+          example: 8001
+        documentTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/scanningDocumentType'
       required:
         - documentClass
         - documentClassDescription
         - active
       x-examples:
-        mhr-example:
-          documentType: REG_103
-          documentTypeDescription: TRANSPORT PERMIT
+        mhr-example-incomplete:
           active: true
-          applicationId: MHR
+          documentClass: MHR
+          documentClassDescription: Manufactured Home Registry
+          ownerType: MHR
+          scheduleNumber: 4029
+          documentTypes:
+            - active: true
+              applicationID: MHR
+              documentType: ABAN
+              documentTypeDescription: TRANSFER DUE TO ABANDONMENT AND SALE
+            - active: true
+              applicationID: MHR
+              documentType: ADDI
+              documentTypeDescription: ADDITION
+            - active: true
+              applicationID: REGI
+              documentType: AFDV
+              documentTypeDescription: 'Affidavit Document'
+            - active: true
+              applicationID: MHR
+              documentType: AFFE
+              documentTypeDescription: 'TRANSFER TO EXECUTOR – ESTATE UNDER $25,000 WITH WILL'
+            - active: true
+              applicationID: MHR
+              documentType: ATTA
+              documentTypeDescription: ATTACHMENT
+            - active: true
+              applicationID: MHR
+              documentType: BANK
+              documentTypeDescription: TRANSFER DUE TO BANKRUPTCY
     scanningDocumentType:
       title: scanningDocumentType
       type: object
