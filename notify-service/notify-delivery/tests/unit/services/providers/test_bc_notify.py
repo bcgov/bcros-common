@@ -217,7 +217,7 @@ class TestBCNotify(unittest.TestCase):
         payload = call_kwargs["json"]
         self.assertEqual(payload["template_id"], "bc_notify_template_123")
         self.assertEqual(payload["email_reply_to_id"], "bc_notify_reply_to_456")
-        self.assertEqual(call_kwargs["headers"]["Authorization"], f"Bearer {_VALID_API_KEY}")
+        self.assertEqual(call_kwargs["headers"]["Authorization"], f"ApiKey-v1 {_VALID_API_KEY}")
 
     @patch("notify_delivery.services.providers.bc_notify.requests.post")
     @patch("notify_delivery.services.providers.gc_notify.NotificationsAPIClient")

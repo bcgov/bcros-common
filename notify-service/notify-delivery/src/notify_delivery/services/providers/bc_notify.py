@@ -88,7 +88,7 @@ class BCNotify(GCNotify):
             return None
 
         url = f"{self.gc_notify_url.rstrip('/')}/v2/notifications/email"
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        headers = {"Authorization": f"ApiKey-v1 {self.api_key}", "Content-Type": "application/json"}
 
         payload = {
             "email_address": recipient,
