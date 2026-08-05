@@ -53,6 +53,7 @@ CERTIFIED_COPY_IMAGE_RECT_CONVERSION = pymupdf.Rect(215.0, 145.0, 290.0, 205.0)
 CERTIFIED_COPY_TEXT_POINT = pymupdf.Point(433, 210)
 CERTIFIED_COPY_IMAGE_RECT = pymupdf.Rect(460.0, 142.0, 535.0, 202.0)
 CERTIFIED_COPY_REMOVE_RECT = pymupdf.Rect(450.0, 145.0, 600.0, 225.0)
+CERTIFIED_COPY_STAFF_REMOVE_RECT = pymupdf.Rect(485.0, 30.0, 560.0, 105.0)
 APP_FILING_TYPE_CONVERSION: str = "CONVL"
 
 
@@ -500,6 +501,10 @@ def add_doc_certified_copy(report_data: bytes, cert_config: dict) -> bytes:
     image_data = get_certified_copy_image(False)
     doc = pymupdf.Document(stream=report_data)
     page = doc[0]
+    # Remove staff submitted document certified copy block.
+    page.add_redact_annot(CERTIFIED_COPY_STAFF_REMOVE_RECT)
+    page.apply_redactions()  # This permanently removes the content
+
     add_text = get_app_report_datetime()
     point = pymupdf.Point(cert_config.get("textCoordX"), cert_config.get("textCoordY"))
     config_rect = cert_config.get("rect")

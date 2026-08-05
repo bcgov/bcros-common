@@ -41,6 +41,10 @@ CERT_COPY_TEST_AR_LEGACY_INFILE = "tests/unit/reports/data/legacy-conv-ar-filing
 CERT_COPY_TEST_AR_LEGACY_OUTFILE = "tests/unit/reports/data/legacy-conv-ar-filing-updated.pdf"
 CERT_COPY_TEST_COOP_INFILE = "tests/unit/reports/data/coop-mem-filing-1.pdf"
 CERT_COPY_TEST_COOP_OUTFILE = "tests/unit/reports/data/coop-mem-filing-ex1.pdf"
+CERT_COPY_TEST_COOP_STAFF_INFILE = "tests/unit/reports/data/coop-rules-filing-staff-1.pdf"
+CERT_COPY_TEST_COOP_STAFF_OUTFILE = "tests/unit/reports/data/coop-rules-filing-staff-ex1.pdf"
+CERT_COPY_TEST_COOP_STAFF_INFILE2 = "tests/unit/reports/data/coop-mem-filing-staff-1.pdf"
+CERT_COPY_TEST_COOP_STAFF_OUTFILE2 = "tests/unit/reports/data/coop-mem-filing-staff-ex1.pdf"
 
 
 # testdata pattern is ({legacy}, {conversion}, {infile}, {outfile})
@@ -52,6 +56,8 @@ TEST_CERT_COPY_DATA = [
 # testdata pattern is ({doc_class}, {doc_type}, {infile}, {outfile})
 TEST_DOC_CERT_COPY_DATA = [
     ("COOP", "COOP_MEMORANDUM", CERT_COPY_TEST_COOP_INFILE, CERT_COPY_TEST_COOP_OUTFILE),
+    ("COOP", "COOP_RULES", CERT_COPY_TEST_COOP_STAFF_INFILE, CERT_COPY_TEST_COOP_STAFF_OUTFILE),
+    ("COOP", "COOP_MEMORANDUM", CERT_COPY_TEST_COOP_STAFF_INFILE2, CERT_COPY_TEST_COOP_STAFF_OUTFILE2),
 ]
 
 
@@ -170,13 +176,20 @@ def test_add_coop_certified(session, client, jwt):
     """Assert that adding a certified copy image and date and time to an app report works as expected."""
     raw_data = None
     image_data = report_utils.get_certified_copy_image(False)
-    infile = CERT_COPY_TEST_COOP_INFILE
-    outfile = CERT_COPY_TEST_COOP_OUTFILE
+    # infile = CERT_COPY_TEST_COOP_INFILE
+    # outfile = CERT_COPY_TEST_COOP_OUTFILE
+    infile = CERT_COPY_TEST_COOP_STAFF_INFILE
+    outfile = CERT_COPY_TEST_COOP_STAFF_OUTFILE
     with open(infile, 'rb') as data_file:
         raw_data = data_file.read()
         data_file.close()
     doc = pymupdf.Document(stream=raw_data)
     page = doc[0]
+
+    remove_rect = pymupdf.Rect(485.0, 30.0, 560.0, 105.0)
+    page.add_redact_annot(remove_rect)
+    page.apply_redactions() # This permanently removes the content
+
     point = pymupdf.Point(483, 78)
     add_text = report_utils.get_app_report_datetime()
     image_rect = pymupdf.Rect(510.0, 10.0, 585.0, 70.0)
