@@ -25,12 +25,13 @@ from flask import current_app
 from doc_api.models import ApplicationReport, Document
 from doc_api.models import utils as model_utils
 from doc_api.resources.v1.application_reports import (
-    build_event_zip, get_zip_filename,
+    add_documents,
+    build_event_zip,
+    get_zip_filename,
     is_certified_copy_report_type,
     is_certified_copy_request
 )
 from doc_api.services.authz import BC_REGISTRY, COLIN_ROLE, STAFF_ROLE, SYSTEM_ROLE
-from doc_api.services.document_storage.storage_service import GoogleStorageService
 from doc_api.utils.logging import logger
 from tests.unit.services.utils import (
     create_header_account,
@@ -139,6 +140,71 @@ CC_FILING_INFILE = "tests/unit/reports/data/filing.pdf"
 CC_FILING_OUTFILE = "tests/unit/resources/filing-certified.pdf"
 CC_FILING_AR_LEGACY_INFILE = "tests/unit/reports/data/legacy-conv-ar-filing.pdf"
 CC_FILING_AR_LEGACY_OUTFILE = "tests/unit/reports/data/legacy-conv-ar-certified.pdf"
+REPORTS_TEST1 = [
+  {
+    "dateCreated": "2026-07-22T18:45:06+00:00",
+    "datePublished": "2026-07-22T19:00:00+00:00",
+    "entityIdentifier": "CP1044806",
+    "eventIdentifier": 3671078,
+    "identifier": "DSR0000105896",
+    "reportType": "FILING-2",
+  },
+  {
+    "dateCreated": "2026-07-22T18:45:42+00:00",
+    "datePublished": "2026-07-22T19:00:00+00:00",
+    "entityIdentifier": "CP1044806",
+    "eventIdentifier": 3671078,
+    "identifier": "DSR0000105898",
+    "reportType": "CERT",
+  },
+  {
+    "dateCreated": "2026-07-22T18:45:06+00:00",
+    "datePublished": "2026-07-22T19:00:00+00:00",
+    "entityIdentifier": "CP1044806",
+    "eventIdentifier": 3671078,
+    "identifier": "DSR0000105897",
+    "reportType": "FILING",
+  }
+]
+DOCS_TEST1 = {
+    "consumerDocumentId": "T0000001",
+    "consumerFilename": "test.pdf",
+    "consumerIdentifier": "CP1044806",
+    "documentClass": "COOP",
+    "documentType": "COSD",
+    "consumerFilingDateTime": "2024-07-01T19:00:00+00:00",
+    "consumerReferenceId": "3671078",
+    "documentServiceId": "DS9000102019",
+}
+DOCS_TEST2 = {
+    "consumerDocumentId": "T0000001",
+    "consumerFilename": "test.pdf",
+    "consumerIdentifier": "CP1044806",
+    "documentClass": "COOP",
+    "documentType": "COSD",
+    "consumerFilingDateTime": "2024-07-01T19:00:00+00:00",
+    "consumerReferenceId": "",
+    "documentServiceId": "DS9000102019",
+}
+DOCS_TEST3 = {
+    "consumerDocumentId": "T0000001",
+    "consumerFilename": "test.pdf",
+    "consumerIdentifier": "CP1044806",
+    "documentClass": "COOP",
+    "documentType": "COSD",
+    "consumerFilingDateTime": "2024-07-01T19:00:00+00:00",
+    "documentServiceId": "DS9000102019",
+}
+DOCS_TEST4 = {
+    "consumerDocumentId": "T0000001",
+    "consumerFilename": "test.pdf",
+    "consumerIdentifier": "CP1044806",
+    "documentClass": "COOP",
+    "documentType": "COSD",
+    "consumerFilingDateTime": "2024-07-01T19:00:00+00:00",
+    "consumerReferenceId": "4671078",
+    "documentServiceId": "DS9000102019",
+}
 
 # testdata pattern is ({description}, {entity_id}, {event_id}, {rtype}, {status})
 TEST_CREATE_DATA = [
@@ -302,6 +368,15 @@ TEST_GET_EVENT_DATA_PRODUCT_ALL = [
     ("Invalid role", "UT-123456", "123456", REPORT_TYPES_ZIP, HTTPStatus.UNAUTHORIZED, "BUSINESS", USER_ROLES, PAYLOAD_EMPTY, ""),
     ("Invalid product code", "UT-123456", REPORT_TYPES_ZIP, "FILING", HTTPStatus.BAD_REQUEST, "XXX", PRODUCT_ROLES_SYSTEM, PAYLOAD_EMPTY, ""),
 ]
+# testdata pattern is ({description}, {doc_added}, {report_list}, {doc}, {list_length}, {drs_id})
+TEST_ADD_DOC_DATA = [
+    ("No docs", False, REPORTS_TEST1, None, 3, "DS0000102019", "CP1044806"),
+    ("Valid doc", True, REPORTS_TEST1, DOCS_TEST1, 4, "DS0000102019", "CP1044806"),
+    ("Event ID 0 doc", False, REPORTS_TEST1, DOCS_TEST2, 3, "DS0000102019", "CP1044806"),
+    ("No event ID doc", False, REPORTS_TEST1, DOCS_TEST3, 3, "DS0000102019", "CP1044806"),
+    ("Different event ID doc", True, REPORTS_TEST1, DOCS_TEST4, 4, "DS0000102019", "CP1044806"),
+]
+
 
 
 @pytest.mark.parametrize("desc,entity_id,event_id,report_type,status,prod_code,roles", TEST_CREATE_DATA_PRODUCT)
@@ -855,6 +930,23 @@ def test_zip_filename(session, client, jwt, desc, request_data, app_rep_type, ap
         app_rep_json["documentType"] = app_doc_type
     test_filename = get_zip_filename(request_data, app_rep_json)
     assert test_filename == filename
+
+
+@pytest.mark.parametrize("desc,doc_added,report_list,doc,list_length,drs_id, entity_id", TEST_ADD_DOC_DATA)
+def test_report_add_documents(session, client, jwt, desc, doc_added, report_list, doc, list_length, drs_id, entity_id):
+    """Assert adding documents to application reports works as expected."""
+    if doc:
+        save_doc: Document = Document.create_from_json(doc, doc.get("documentType"))
+        save_doc.document_service_id = drs_id
+        save_doc.save()
+    test_list = add_documents(entity_id, report_list)
+    assert len(test_list) == list_length
+    found_doc: bool = False
+    for test_doc in test_list:
+        if test_doc.get("identifier") == drs_id:
+            found_doc = True
+            break
+    assert found_doc == doc_added
 
 
 def test_build_event_zip(session, client, jwt):

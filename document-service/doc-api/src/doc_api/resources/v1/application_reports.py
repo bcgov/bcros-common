@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """API endpoints for requests to maintain application reports."""
+import copy
 import io
 import zipfile
 from http import HTTPStatus
@@ -280,7 +281,8 @@ def get_product_history_reports(prod_code: str, entity_id: str):
         if extra_validation_msg != "":
             return resource_utils.extra_validation_error_response(extra_validation_msg)
         reports_json: list = ApplicationReport.find_by_entity_id_json(entity_id, prod_code)
-        reports_json = add_documents(request, entity_id, reports_json)
+        if is_include_docs_request(request.args.get("includeDocuments")):
+            reports_json = add_documents(entity_id, reports_json)
         if not reports_json:
             logger.warning(f"No {prod_code} report records found for entity id={entity_id}.")
             return resource_utils.not_found_error_response(
@@ -434,10 +436,12 @@ def get_new_report_params(req: request, request_json: dict) -> dict:
     return request_json
 
 
-def add_documents(req: request, entity_id: str, reports_json: list) -> list:
-    """Conditionally include documents to the entity identifier filing history request."""
-    if not req.args.get("includeDocuments", False):
-        return reports_json
+def add_documents(entity_id: str, reports_json: list) -> list:
+    """
+    Conditionally include documents to the entity identifier filing history request. Only include documents
+    that have an event identifier which may or may not match one of the report event identifiers. For pre DRS
+    integration filings that are not colin migration, a filing report may not yet exist in the DRS.
+    """
     docs_json = Document.find_history_by_consumer_id(entity_id)
     if not docs_json:
         return reports_json
@@ -450,13 +454,14 @@ def add_documents(req: request, entity_id: str, reports_json: list) -> list:
             all_json.append(rep)
         else:
             event_id = rep.get("eventIdentifier")
+            all_json.append(rep)
             for doc in docs_json:
                 if doc.get("eventIdentifier") and doc.get("eventIdentifier") == event_id:
-                    all_json.append(doc)
-            all_json.append(rep)
-    # Append orphaned docs (no event ID)
+                    all_json.append(copy.deepcopy(doc))
+                    doc["added"] = True
+    # Now add documents that have event identifiers that do not match any filing report event identifiers.
     for doc in docs_json:
-        if not doc.get("eventIdentifier") or doc.get("eventIdentifier") < 1:
+        if doc.get("eventIdentifier") and doc.get("eventIdentifier") > 1 and not doc.get("added", False):
             all_json.append(doc)
     return all_json
 
