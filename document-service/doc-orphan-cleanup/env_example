@@ -1,0 +1,31 @@
+#
+# This file contains the environment-specific settings that are read by python-dotenv. Place it somewhere above your
+# source code and it will be used.
+#
+DEPLOYMENT_PLATFORM = "gcp"
+DEPLOYMENT_PROJECT = ""
+DEPLOYMENT_ENV = "production"
+
+# third party Services
+
+DOC_DATABASE_UNIX_SOCKET=""
+DOC_DATABASE_USERNAME=""
+DOC_DATABASE_PASSWORD=""
+DOC_DATABASE_NAME=""
+DOC_DATABASE_HOST=""
+DOC_DATABASE_PORT=""
+
+# A comma separated list of DRS document classes to include in the clean up job. Default value is "COOP, CORP, FIRM"
+DOCUMENT_ClASSES="COOP,CORP,FIRM"
+# Boolean True/False whether to logically or permanently delete the document records. Logically means removed from API calls but manually recoverable. Default is True.
+LOGICAL_DELETE="True"
+# Determines the orphan record candidates as the number of days between record creation and now where no filing/registration is linked to the record. Default value is 30
+UNCONSUMED_ORPHAN_INTERVAL="30"
+# Optionally notify job run status by email
+NOTIFY_CONFIG='{"url": "","recipients": "","subject":"DRS Orphaned Business Document Cleanup","body": "Number of documents deleted: {orphan_count}\nJob status: {status}\mError message: {error_msg}\n"}'
+# Required for notification service.
+JWT_OIDC_TOKEN_URL=""
+# Required for notification service.
+ACCOUNT_SVC_CLIENT_ID=""
+# Required for notification service.
+ACCOUNT_SVC_CLIENT_SECRET=""
