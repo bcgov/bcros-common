@@ -33,14 +33,15 @@ select m.corp_num, c.corp_password
    and m.migrated_ts is null
    and c.corp_password is not null
 """
-QUERY_JOB_CORPS_RECENT_BASE = """
-select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:SS') as migrated_ts, m.report_count,
-       m.error_count, m.migration_summary
-  from mig_colin_reports m, colin_extract.corporation c
- where c.corp_num = m.corp_num
-   and m.migrated_ts is not null
-   and m.report_count > 0
-   and c.corp_password is not null
+QUERY_JOB_CORPS_HIST_BASE = """
+select m.corp_num
+  from mig_colin_reports m, colin_extract.corp_state cs
+ where cs.corp_num = m.corp_num
+   and cs.end_event_id is null
+   and cs.op_state_type_cd = 'HIS'
+   and m.migrated_ts is null
+"""
+QUERY_JOB_CORPS_RECENT_CLAUSE = """
    and not exists (select cp.id
                      from colin_extract.corp_processing cp
                     where cp.corp_num = m.corp_num
@@ -69,6 +70,32 @@ select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:S
                                            'NOALC','NOCHN','NOCIX','LNKPS','NOAP2','NOCA2','NOCX2','NORV2','NOCR2',
                                            'NOCB2'))
 """
+QUERY_JOB_CORPS_RECENT_BASE = (
+    """
+select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:SS') as migrated_ts, m.report_count,
+       m.error_count, m.migration_summary
+  from mig_colin_reports m, colin_extract.corporation c
+ where c.corp_num = m.corp_num
+   and m.migrated_ts is not null
+   and m.report_count > 0
+   and c.corp_password is not null
+"""
+    + QUERY_JOB_CORPS_RECENT_CLAUSE
+)
+QUERY_JOB_CORPS_RECENT_HIST_BASE = (
+    """
+select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:SS') as migrated_ts, m.report_count,
+       m.error_count, m.migration_summary
+  from mig_colin_reports m, colin_extract.corporation c, colin_extract.corp_state cs
+ where c.corp_num = m.corp_num
+   and cs.corp_num = m.corp_num
+   and cs.end_event_id is null
+   and cs.op_state_type_cd = 'HIS'
+   and m.migrated_ts is not null
+   and m.report_count > 0
+"""
+    + QUERY_JOB_CORPS_RECENT_CLAUSE
+)
 QUERY_JOB_CORPS_CONVERSION_AR = """
 select m.corp_num, c.corp_password, to_char(m.migrated_ts, 'YYYY-MM-DD HH24:MI:SS') as migrated_ts, m.report_count,
        m.error_count, m.migration_summary
@@ -214,9 +241,23 @@ class Database:  # pylint: disable=too-few-public-methods
         return sql_statement
 
     @classmethod
+    def get_job_corps_hist_query(cls, config: Config) -> str:
+        """Build the job run historical companies query based on the job env variables"""
+        sql_statement: str = (
+            QUERY_JOB_CORPS_HIST_BASE if not config.UPDATE_PREVIOUS else QUERY_JOB_CORPS_RECENT_HIST_BASE
+        )
+        if config.JOB_ID and config.JOB_ID > 0:
+            sql_statement += QUERY_CORPS_JOB_ID_CLAUSE.format(job_id=config.JOB_ID)
+        if config.JOB_YEAR and config.JOB_YEAR > 0:
+            sql_statement += QUERY_CORPS_YEAR_CLAUSE.format(corp_year=config.JOB_YEAR)
+        if config.JOB_BATCH_SIZE and config.JOB_BATCH_SIZE > 0:
+            sql_statement += QUERY_CORPS_SIZE_LIMIT.format(job_size=config.JOB_BATCH_SIZE)
+        return sql_statement
+
+    @classmethod
     def get_job_corps(cls, config: Config) -> list:
         """Get job run companies."""
-        sql_statement: str = cls.get_job_corps_query(config)
+        sql_statement: str = cls.get_job_corps_query(config) if config.ACTIVE else cls.get_job_corps_hist_query(config)
         logger.info(f"Executing query to get job companies: {sql_statement}")
         Database.bus_db_cursor.execute(sql_statement)
         return Database.bus_db_cursor.fetchall()

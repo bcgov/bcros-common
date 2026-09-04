@@ -19,6 +19,7 @@ from http import HTTPStatus
 import psycopg2
 import pymupdf
 import requests
+from bs4 import BeautifulSoup
 
 from colin_report_migration.config import Config
 from colin_report_migration.database import Database
@@ -32,6 +33,8 @@ REPORT_TYPE_NOA = "noa"
 REPORT_TYPE_RECEIPT = "receipt"
 STORAGE_DOC_NAME = "{report_date}/{corp_num}-{event_id}-{report_type}.pdf"
 REPORT_PATH = "/reprint/report.do?action={report_type}Report&check_token=no&historyIndex={filing_index}"
+HIST_REPORT_PATH = "/search/report.do?action={report_type}Report&check_token=no&historyIndex={filing_index}"
+HIST_REPORT_PATH1 = "/search/report.do?action={report_type}Report&amp;check_token=no&amp;historyIndex={filing_index}"
 SCRAPING_MENU_PATH = "/accesstransaction/menu.do?action=overview&filingTypeCode=RPRNT&from=main"
 SCRAPING_OVERVIEW_PATH = "/accesstransaction/menu.do"
 SCRAPING_SEARCH_PATH = "/identcorp/searchCorp.do"
@@ -46,6 +49,30 @@ SCRAPING_SEARCH_DATA = {
     "nextButton.x": 27,
     "nextButton.y": 7,
 }
+SCRAPING_SEARCH_HIST_DATA = {
+    "_flowExecutionKey": "e1s1",
+    "basicSearch": True,
+    "individualSearch": False,
+    "clientLettersSearch": False,
+    "incorporationNumber": "",
+    "basicStateType": "ACT",
+    "basicCorporationTypes": "CFS",
+    "advancedStateType": "ACT",
+    "advancedCorporationTypes": "CFS",
+    "findResults": "ALL",
+    "_csrf": "",
+}
+HIST_PATH1 = (
+    "/int/logon.cgi?flags=1000:1,0&TYPE=33554433&REALMOID=06-43462114-ead0-4da9-9bec-83e62afcabcd&GUID="
+    + "&SMAUTHREASON=0&METHOD=GET&TARGET="
+    + "https%3a%2f%2fwww%2ebcregistryallservices%2egov%2ebc%2eca%2fsofi%2flogin%2flogin%2ehtm"
+)
+HIST_PATH2 = "/preLogon.cgi"
+HIST_PATH3 = "/int01/logon.fcc"
+HIST_PATH4 = "/int01/private/postLogon.cgi"
+SOFI_LOGIN_PATH = "/login/login.htm"
+SOFI_START_PATH = "/sofi.htm?_flowId=search&_flowExecutionKey=e1s1"
+HIST_SEARCH_PATH = "/login/search/searchAction.do?corpNum={corp_num}&_flowExecutionKey=e1s1"
 
 
 def get_storage_name(filing_date: str, corp_num: str, event_id: int, report_type: str) -> str:
@@ -55,6 +82,67 @@ def get_storage_name(filing_date: str, corp_num: str, event_id: int, report_type
         report_date=report_date, corp_num=corp_num, event_id=event_id, report_type=report_type
     )
     return storage_name
+
+
+def setup_historical(config: Config):
+    """
+    For companies in a historical state, set up the colin session before getting a company ledger history
+    using SOFI searching.
+
+    Args:
+        config: Job configuration containing environment variables.
+    """
+    if not config.HIST_LOGIN_URL or not config.HIST_ID or not config.HIST_PASS or not config.SOFI_URL:
+        logger.error("Status HIS but setup_historical not configured correctly: aborting.")
+        return None
+    url = config.HIST_LOGIN_URL + HIST_PATH1
+    step: str = "Historical Logon 1 GET"
+    try:
+        session = requests.Session()
+        response = session.get(url, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"setup_historical {step} error")
+            raise ScrapingException(f"Scraping setup_historical {step} failed for url={url}.")
+        step = "Historical Logon 2 POST"
+        url = config.HIST_LOGIN_URL + HIST_PATH2
+        payload = {"instance": "instance_int", "user": config.HIST_ID, "password": config.HIST_PASS}
+        response = session.post(url, data=payload, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"setup_historical {step} error")
+            raise ScrapingException(f"Scraping setup_historical {step} failed for url={url}.")
+        step = "Historical Logon 3 POST"
+        url = config.HIST_LOGIN_URL + HIST_PATH3
+        payload = {
+            "SMENC": "ISO-8859-1",
+            "SMLOCALE": "US-EN",
+            "target": "/clp-cgi/int01/private/postLogon.cgi",
+            "smauthreason": "0",
+            "smagentname": None,
+            "user": config.HIST_ID,
+            "password": config.HIST_PASS,
+        }
+        response = session.post(url, data=payload, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"setup_historical {step} error")
+            raise ScrapingException(f"Scraping setup_historical {step} failed for url={url}.")
+        step = "Historical Logon 4 GET"
+        url = config.HIST_LOGIN_URL + HIST_PATH4
+        response = session.get(url, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"setup_historical {step} error")
+            raise ScrapingException(f"Scraping setup_historical {step} failed for url={url}.")
+        step = "Historical SOFI login GET"
+        url = config.SOFI_URL + SOFI_LOGIN_PATH
+        response = session.get(url, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"setup_historical {step} error")
+            raise ScrapingException(f"Scraping setup_historical {step} failed for url={url}.")
+        # print(session.cookies.get_dict())
+        return session
+    except ScrapingException:
+        raise
+    except Exception as err:
+        raise ScrapingException(f"Scraping setup_historical failed for step {step}. {err}") from err
 
 
 def get_corp_filings_page(corp_num: str, corp_password: str, colin_url: str) -> dict:
@@ -85,6 +173,7 @@ def get_corp_filings_page(corp_num: str, corp_password: str, colin_url: str) -> 
         page_text = response.text
         filing_info: dict = {"colin_url": colin_url, "filings_page": page_text, "cookies": cookies}
         filing_info["no_reports"] = page_text.find("check_token=no&historyIndex=") < 1
+        filing_info["active"] = True
         # logger.info(f"get_corp_filings_page length={len(response.text)}")
         return filing_info
     except ScrapingException:
@@ -93,9 +182,49 @@ def get_corp_filings_page(corp_num: str, corp_password: str, colin_url: str) -> 
         raise ScrapingException(f"Scraping failed for step {step} corp num={corp_num}. {err}") from err
 
 
-def has_report(filings_page: str, filing_index: int, report_type: str) -> bool:
+def get_corp_hist_filings_page(session, corp_num: str, colin_url: str, sofi_url: str) -> dict:
+    """COLIN UI screen scraping to retrieve filing history by corp num for a historical company."""
+    step: str = "SOFI search page GET"
+    try:
+        url: str = sofi_url + SOFI_START_PATH
+        response = session.get(url, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"get_corp_hist_filings_page {step} response error")
+            raise ScrapingException(f"Scraping get_corp_hist_filings_page {step} failed for url={url}.")
+        step = "SOFI search corp num POST"
+        search_data = copy.deepcopy(SCRAPING_SEARCH_HIST_DATA)
+        search_data["incorporationNumber"] = corp_num
+        # Extract required request token from the response header meta info.
+        soup = BeautifulSoup(response.text, "html.parser")
+        tag = soup.find("meta", attrs={"name": "_csrf"})
+        search_data["_csrf"] = tag.get("content") if tag else ""
+        response = session.post(url, data=search_data, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"get_corp_hist_filings_page {step} response error")
+            raise ScrapingException(f"Scraping get_corp_hist_filings_page {step} failed for url={url}.")
+        step = "COLIN search corp num GET"
+        url = colin_url + HIST_SEARCH_PATH.format(corp_num=corp_num)
+        response = session.get(url, timeout=(2, 10))
+        if not response.ok:
+            logger.error(f"get_corp_hist_filings_page {step} response error")
+            raise ScrapingException(f"Scraping get_corp_hist_filings_page {step} failed for url={url}.")
+        page_text = response.text
+        filing_info: dict = {"colin_url": colin_url, "filings_page": page_text, "cookies": session.cookies.get_dict()}
+        filing_info["no_reports"] = page_text.find("check_token=no&amp;historyIndex=") < 1
+        filing_info["active"] = False
+        return filing_info
+    except ScrapingException:
+        raise
+    except Exception as err:
+        raise ScrapingException(f"Scraping failed for step {step} corp num={corp_num}. {err}") from err
+
+
+def has_report(filings_page: str, filing_index: int, report_type: str, active: bool = True) -> bool:
     """Determine if filing has a specific report by examining the company history page."""
-    test_report = REPORT_PATH.format(report_type=report_type, filing_index=filing_index) + "&"
+    if active:
+        test_report = REPORT_PATH.format(report_type=report_type, filing_index=filing_index) + "&"
+        return filings_page.find(test_report) > 0
+    test_report = HIST_REPORT_PATH1.format(report_type=report_type, filing_index=filing_index) + "&amp;"
     return filings_page.find(test_report) > 0
 
 
@@ -109,7 +238,11 @@ def is_stale_extract(filing_rows: list, filings_info: dict) -> bool:
     tz_first_filing_date: str = str(filing_row[4])
     index_first_filing_date = filings_page.find(expected_first_filing_date)
     index_tz_filing_date = filings_page.find(tz_first_filing_date)
-    index_first_report = filings_page.find("historyIndex=0")
+    index_first_report = filings_page.find("Report&amp;check_token=no&amp;historyIndex=0")
+    if index_first_report < 1:
+        index_first_report = filings_page.find("Report&check_token=no&historyIndex=0")
+    if index_first_report < 1:
+        index_first_report = filings_page.find("historyIndex=0")
     return index_first_report < index_first_filing_date and index_first_report < index_tz_filing_date
 
 
@@ -135,7 +268,11 @@ def save_report(corp_num: str, report_type: str, filing_info: dict, result: dict
         colin_url = filing_info.get("colin_url")
         filing_index: int = filing_info.get("filing_index")
         cookies: dict = filing_info.get("cookies")
-        report_url = colin_url + REPORT_PATH.format(report_type=report_type, filing_index=filing_index)
+        report_url = colin_url
+        if filing_info.get("active", True):
+            report_url += REPORT_PATH.format(report_type=report_type, filing_index=filing_index)
+        else:
+            report_url += HIST_REPORT_PATH.format(report_type=report_type, filing_index=filing_index)
         response = requests.get(report_url, cookies=cookies)
         if response.status_code == HTTPStatus.OK and response.text and response.text.find("Error") > 0:
             result["error_count"] = result.get("error_count") + 1
@@ -164,10 +301,11 @@ def migrate_filing(filing_row, corp_num: str, filing_info: dict) -> dict:
         result["filing_date"] = str(filing_row[0])
         result["event_id"] = int(filing_row[1])
         result["filing_type"] = str(filing_row[2])
+        active: bool = filing_info.get("active", True)
         # logger.info(f"{result.get("event_id")} {result.get("filing_type")}")
-        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_RECEIPT):
+        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_RECEIPT, active):
             result = save_report(corp_num, REPORT_TYPE_RECEIPT, filing_info, result)
-        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_FILING):
+        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_FILING, active):
             result = save_report(corp_num, REPORT_TYPE_FILING, filing_info, result)
         elif (
             result["filing_type"] == "CONVL"
@@ -176,9 +314,9 @@ def migrate_filing(filing_row, corp_num: str, filing_info: dict) -> dict:
             and str(filing_row[6]) == "AR"
         ):
             result = save_report(corp_num, REPORT_TYPE_FILING, filing_info, result)
-        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_NOA):
+        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_NOA, active):
             result = save_report(corp_num, REPORT_TYPE_NOA, filing_info, result)
-        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_CERT):
+        if has_report(filing_info.get("filings_page"), filing_info.get("filing_index"), REPORT_TYPE_CERT, active):
             result = save_report(corp_num, REPORT_TYPE_CERT, filing_info, result)
     except Exception as err:
         result["error_count"] = result.get("error_count") + 1
@@ -200,7 +338,7 @@ def migrate_filing_conversion_ar(filing_row, corp_num: str, filing_info: dict) -
     return result
 
 
-def migrate_reports(config: Config, rows: list):
+def migrate_reports(config: Config, rows: list):  # pylint: disable=too-many-locals
     """
     Migrate reports for each company in the rows list following the steps outlined in the job description.
 
@@ -213,14 +351,23 @@ def migrate_reports(config: Config, rows: list):
     corp_num: str = ""
     corp_count: int = 0
     filing_summary: dict
+    historical_session = setup_historical(config) if rows and not config.ACTIVE else None
+    if not config.ACTIVE and historical_session is None:
+        return
     for row in rows:
         summary_json = []
         error_count: int = 0
         report_count: int = 0
+        filing_info: dict = {}
         corp_count += 1
         try:
             corp_num = str(row[0])
-            filing_info: dict = get_corp_filings_page(corp_num, str(row[1]), config.COLIN_URL)
+            if config.ACTIVE:
+                filing_info = get_corp_filings_page(corp_num, str(row[1]), config.COLIN_URL)
+            else:
+                filing_info = get_corp_hist_filings_page(
+                    historical_session, corp_num, config.COLIN_URL, config.SOFI_URL
+                )
             if filing_info.get("no_reports"):
                 filing_summary = {
                     "skipped": True,
@@ -254,7 +401,7 @@ def migrate_reports(config: Config, rows: list):
     logger.info(f"Final counts companies={corp_count} errors={total_error_count} reports={total_report_count}.")
 
 
-def migrate_recent_reports(config: Config, rows: list):
+def migrate_recent_reports(config: Config, rows: list):  # pylint: disable=too-many-locals, too-many-branches
     """
     For companies where the reports have migrated but a filing was created after the last
     report migration, and the filing has outputs, migrate reports for each company recent filing in the rows list
@@ -270,14 +417,23 @@ def migrate_recent_reports(config: Config, rows: list):
     corp_num: str = ""
     corp_count: int = 0
     filing_summary: dict
+    historical_session: dict = setup_historical(config) if rows and not config.ACTIVE else None
+    if not config.ACTIVE and historical_session is None:
+        return
     for row in rows:
         summary_json = []
         error_count: int = 0
         report_count: int = 0
+        filing_info: dict = {}
         corp_count += 1
         try:
             corp_num = str(row[0])
-            filing_info: dict = get_corp_filings_page(corp_num, str(row[1]), config.COLIN_URL)
+            if config.ACTIVE:
+                filing_info = get_corp_filings_page(corp_num, str(row[1]), config.COLIN_URL)
+            else:
+                filing_info = get_corp_hist_filings_page(
+                    historical_session, corp_num, config.COLIN_URL, config.SOFI_URL + SOFI_START_PATH
+                )
             if filing_info.get("no_reports"):
                 filing_summary = {
                     "skipped": True,

@@ -38,6 +38,8 @@ class Config:  # pylint: disable=too-few-public-methods
     DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "production")
 
     COLIN_URL = os.getenv("COLIN_URL")
+    HIST_LOGIN_URL = os.getenv("HIST_LOGIN_URL", None)
+    SOFI_URL = os.getenv("SOFI_URL", None)
 
     DB_USER = os.getenv("DOC_DATABASE_USERNAME", "")
     DB_PASSWORD = os.getenv("DOC_DATABASE_PASSWORD", "")
@@ -70,9 +72,12 @@ class Config:  # pylint: disable=too-few-public-methods
     JOB_ID: int = int(os.getenv("MIGRATION_JOB_ID", "0"))
     JOB_YEAR: int = int(os.getenv("MIGRATION_JOB_YEAR", "0"))
     JOB_BATCH_SIZE: int = int(os.getenv("MIGRATION_JOB_BATCH_SIZE", "0"))
-    JOB_CORP_STATE: str = os.getenv("MIGRATION_CORP_STATE")
+    JOB_CORP_STATE: str = os.getenv("MIGRATION_CORP_STATE", "ACT")
+    HIST_ID = os.getenv("HIST_ID", None)
+    HIST_PASS = os.getenv("HIST_PASS", None)
     # For previously migrated companies, set to True to migrate reports for filings created since the last migration.
     mig_update_previous: str = os.getenv("MIGRATION_UPDATE_PREVIOUS", "false")
     mig_update_previous = mig_update_previous.strip().lower()
     UPDATE_PREVIOUS: bool = mig_update_previous in ("yes", "true", "t", "on", "1")
     UPDATE_CONVERSION_AR: bool = mig_update_previous in ("conv_ar", "conversion_ar")
+    ACTIVE: bool = JOB_CORP_STATE != "HIS"
