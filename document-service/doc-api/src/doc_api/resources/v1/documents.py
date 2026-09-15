@@ -52,7 +52,7 @@ def post_documents(doc_class: str, doc_type: str):
         info = resource_utils.get_request_info(request, info, is_staff(jwt))
         info.document_class = doc_class
         logger.info(f"Starting new create document request {req_path}, account={info.account_id}")
-        if doc_class == DocumentClasses.CORP.value and escape(request.args.get(PARAM_CONSUMER_FILINGTYPE)):
+        if doc_class == DocumentClasses.CORP.value and request.args.get(PARAM_CONSUMER_FILINGTYPE):
             filing_type: str = escape(request.args.get(PARAM_CONSUMER_FILINGTYPE))
             filing_doc: FilingTypeDocument = FilingTypeDocument.find_by_filing_type(filing_type)
             if filing_doc:
@@ -271,7 +271,7 @@ def validate_new_doc_request(info: RequestInfo) -> str:
 def convert_clean(info: RequestInfo, in_data: bytes):
     """Convert non-pdf document file data to pdf, clean the pdf data."""
     if not in_data:
-        return None, HTTPStatus.OK, None
+        return bytes(), HTTPStatus.OK, None
     if info.content_type == MediaTypes.CONTENT_TYPE_PDF:
         cleaned_data = clean_pdf(in_data)
         return cleaned_data, HTTPStatus.OK, None
