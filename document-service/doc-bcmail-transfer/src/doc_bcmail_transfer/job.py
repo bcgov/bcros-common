@@ -107,9 +107,13 @@ def sftp_migrate_bcmail(config: Config):
                             if counter % 20 == 0:
                                 logger.info(f"{current_dir} migration count: {counter}")
                     sftp.chdir("..")
+                elif stat.S_ISDIR(rdir.st_mode) and cutoff_date and dir_ts <= cutoff_date:
+                    logger.info(
+                        f"Skipping {rdir.filename} modified date {dir_ts} <= last job run cutoff date {cutoff_date}."
+                    )
                 else:
                     logger.warning(
-                        f"Unexpected file ignored {rdir.filename} size {rdir.st_size} bytes modified {rdir.st_mtime}"
+                        f"Unexpected file ignored {rdir.filename} size {rdir.st_size} bytes modified {dir_ts}"
                     )
     except Exception as sftp_exception:  # noqa: B902; return nicer error
         logger.error(f"BCMail sftp migrate docs remote errors dir={config.SFTP_DIR}: {sftp_exception}")
