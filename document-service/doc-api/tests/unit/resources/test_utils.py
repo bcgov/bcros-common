@@ -611,7 +611,7 @@ def test_doc_certified_config(session, doc_class, doc_type, certified_config):
     all_certified_config = current_app.config.get("DOC_CERT_STAMP_CONFIG")
     if not all_certified_config:
         return
-    key = doc_class + "-" + doc_type if not doc_type.startswith("FORM_") else resource_utils.CERTIFIED_CONFIG_KEY_FORM
+    key = doc_class + "-" + doc_type
     doc_config = all_certified_config.get(key)
     doc_config2 = resource_utils.get_certified_copy_config(doc_class, doc_type)
     if not certified_config:

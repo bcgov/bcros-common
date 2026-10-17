@@ -111,8 +111,6 @@ TO_LEGACY_SCAN_CLASS = {
     "S": DocumentClasses.SOCIETY,
     "XS": DocumentClasses.SOCIETY,
 }
-# New forms certified stamp postion. Initially the same for all classes, all forms where doc type start with "FORM".
-CERTIFIED_CONFIG_KEY_FORM = "*-FORM"
 
 
 def serialize(errors):
