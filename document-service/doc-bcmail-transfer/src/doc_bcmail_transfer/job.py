@@ -34,7 +34,10 @@ from doc_bcmail_transfer.services.document_storage.storage_service import Google
 from doc_bcmail_transfer.services.notify import Notify
 from doc_bcmail_transfer.utils.logging import logger
 
-LOCAL_TZ = pytz.timezone("America/Los_Angeles")
+# Local timezone with daylight savings support:
+# LOCAL_TZ = pytz.timezone("America/Vancouver")
+# Local timezone without daylight savings as offset in minutes: -7 * 60.
+LOCAL_TZ = pytz.FixedOffset(-420)
 DOCUMENT_CLASSES = ["COOP", "CORP", "FIRM", "LP_LLP", "MHR", "NR", "OTHER", "PPR", "SOCIETY"]
 STORAGE_DOC_NAME = "{legacy_date}/{doc_type}-{doc_key}.pdf"
 CSV_FILENAME = "{bucket_path}/{storage_date}/status-bcmail-lan-to-drs.csv"
