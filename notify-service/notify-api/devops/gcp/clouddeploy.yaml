@@ -75,4 +75,4 @@ serialPipeline:
       cloudsql-instances: "c4hnrd-prod:northamerica-northeast1:notify-db-prod"
       service-account: "sa-api@c4hnrd-prod.iam.gserviceaccount.com"
       max-scale: "10"
-      container-concurrency: "20"
+      container-concurrency: "8"
