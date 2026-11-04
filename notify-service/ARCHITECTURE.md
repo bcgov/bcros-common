@@ -1,6 +1,8 @@
 # Architecture Overview
 
-This document follows the [architecture.md](https://architecture.md/) structure and is the canonical architectural orientation for the BC Registries Notify Service. Keep it current when service boundaries, data contracts, deployment, integrations, or operational assumptions change.
+This document explains how the BC Registries Notify Service receives and sends notifications. It covers the main services, message flow, providers, data, and deployment. Keep it up to date when these parts change.
+
+In brief, the API accepts and saves notification requests, Pub/Sub queues them, and a delivery worker sends them through the selected provider and records the result.
 
 For detailed behavior, see:
 
@@ -37,7 +39,7 @@ notify-service/
 └── create_pubsub_bc_notify.sh           # Local/project Pub/Sub setup helper
 ```
 
-The two packages are independently deployable but are coupled through the shared PostgreSQL schema, notification model, provider enum, notification statuses, and CloudEvent contract.
+The API and delivery worker can be deployed separately. They share a database and must agree on notification fields, statuses, and event format.
 
 ## 2. High-Level System Diagram
 
@@ -49,18 +51,18 @@ flowchart LR
     PubSub -->|Push subscription| Delivery[notify-delivery]
     Delivery -->|Shared notification lookup| DB
     Delivery --> GC[GC Notify]
-    Delivery --> BC[BC Notify]
+    Delivery --> BC["Notify (BC)"]
     BC -->|Status callback| API
     Delivery --> SMTP[SMTP]
     Delivery --> Housing[Housing provider]
     Delivery -->|History writes| DB
 ```
 
-The API is the ingress and orchestration boundary. The delivery service is the asynchronous execution boundary. Pub/Sub carries a CloudEvent containing the notification identifier; the delivery service retrieves the full notification from the shared database.
+The API receives each request, saves it, and places a message on Pub/Sub. The message contains the notification ID. The delivery worker uses that ID to load the full notification, send it through a provider, and record the result.
 
 ### Business and deployment context
 
-The following view incorporates the supplied service diagram. It documents the known ecosystem around the two applications, including upstream mailers, partners, the API Gateway, Google Cloud, the OpenShift-Gold forwarding path, and provider lifecycle context.
+This diagram shows systems that may send requests to Notify and the known delivery paths. Some details, such as the API Gateway and OpenShift routing, are managed outside this repository.
 
 ```mermaid
 flowchart LR
@@ -71,26 +73,26 @@ flowchart LR
     Partners[Partners] -.-> Gateway
 
     Gateway --> API[Notify API]
-    API --> Safe[Safe List<br/>Dev/Test]
     API -->|Publish| PubSub[Google Cloud Pub/Sub]
-    Safe-->|Publish| PubSub[Google Cloud Pub/Sub]
 
-    PubSub -->|Text format<br/>QUEUED| Delivery[Notify Delivery]
-    PubSub -->|HTML format<br/>FORWARDED| OCP[OpenShift - Gold<br/>Notify Delivery]
-    Delivery -->|Delivery SENT| GC[GC Notify]
-    Delivery -->|Delivery SENT| BC[BC Notify]
-    BC -->|Status callback| API
+    PubSub -->|QUEUED| Delivery[Notify Delivery]
+    PubSub -->|FORWARDED| OCP[OpenShift - Gold<br/>Notify Delivery]
+    Delivery -->|SENT| GC[GC Notify]
+    Delivery <-->|Dev/Test |Safe[Safe List<br/>]
+    Safe -->|SENT| BC["Notify (BC)"]
+    Delivery -->|"SENT (Prod)"| BC["Notify (BC)"]
+    BC -->|"Status callback (completed, failure)"| API
     OCP -->|Dev| Mailhog
-    OCP -->|Delivery SENT| SMTP
+    OCP -->|SENT| SMTP
 ```
 
-The diagram is an environment and business-context view, not a replacement for the route and event contracts in this repository. In particular, `API Gateway`, the OpenShift forwarding flow, provider subscription names, and the GC Notify decommission date are deployment-owned facts and should be verified against current platform configuration before operational changes. The supplied diagram records GC Notify decommission as planned for **2026-12-30**. `Mailhog` is a development destination, not a production provider.
+The diagram is for context; use the API and event definitions in this repository for exact contracts. Verify the API Gateway, OpenShift routing, provider subscriptions, and planned GC Notify decommission date (**2026-12-30**) against current deployment settings before making operational changes. Mailhog is for development only.
 
 ## 3. Core Components
 
 ### 3.1 notify-api
 
-**Purpose:** Accept authenticated email notification requests, validate them, persist notification work, choose a provider, and publish delivery events.
+**Purpose:** Accept authenticated notification requests, check them, save them, choose a provider, and queue them for delivery.
 
 **Technology:** Python 3.12+, Flask, Flask-Pydantic, Pydantic, Flask-SQLAlchemy, PostgreSQL, Google Cloud Pub/Sub, HTTPX, OIDC/JWT.
 
@@ -106,20 +108,19 @@ The diagram is an environment and business-context view, not a replacement for t
 
 ### 3.2 Provider selection
 
-**Owner:** `notify_api.services.notify_service.NotifyService`.
+The API checks these rules in order and uses the first match. Provider flags determine which provider is active.
 
-Selection order (provider toggles are LaunchDarkly flags evaluated per request):
-
-1. `STRR` requests use BC Notify Housing when `enable-bc-notify-housing` is on, then GC Notify Housing when `enable-gc-notify` is on, otherwise SMTP.
-2. Attachments whose decoded inline content exceeds 6 MiB use SMTP.
-3. HTML containing an `<img>` element or exceeding 50,000 characters uses SMTP.
-4. Remaining notifications use BC Notify when `enable-bc-notify` is on, then GC Notify when `enable-gc-notify` is on, otherwise SMTP.
-
-The selected provider determines the Pub/Sub topic and CloudEvent type. SMS (`/api/v2/sms`) is rejected when `enable-bc-notify-sms` (or `enable-bc-notify-housing-sms` for `STRR`) is off. The resend job re-checks the flags: email queued for a now-disabled provider is re-routed using the rules above, and SMS for a disabled provider is not resent.
+| Email kind | Provider | Routing rule |
+| --- | --- | --- |
+| STRR / Housing | Notify (BC) Housing → GC Notify Housing → SMTP | `requestBy` is `STRR` (case-insensitive). Use the first enabled provider. |
+| Large attachments | SMTP | Total decoded attachment content exceeds 6 MiB. |
+| HTML with an image | SMTP | The HTML body contains an `<img>` element. |
+| Long HTML | SMTP | The HTML body exceeds 50,000 characters. |
+| Other email | Notify (BC) → GC Notify → SMTP | Use the first enabled provider. |
 
 ### 3.3 notify-delivery
 
-**Purpose:** Receive provider-specific Pub/Sub push events, reload notification data, call an external provider, write delivery history, and complete or fail the work record. BC Notify and BC Notify Housing sends remain active as `SENT` while their delivery callback is pending.
+**Purpose:** Receive queued work, load the notification, send it through the selected provider, and record the result. Notify (BC) and Notify (BC) Housing notifications stay in `SENT` until the provider sends a final status callback.
 
 **Technology:** Python 3.12+, Flask, shared `notify-api` models, PostgreSQL, Google Cloud Pub/Sub, provider SDKs and HTTP clients.
 
@@ -138,13 +139,20 @@ A delivery handler returns `200` for accepted or stale work, `400` for invalid m
 
 ### 3.4 Shared queue integration
 
-Both services use the `gcp-queue` integration and CloudEvents. The API publishes an event with source `notify-api`, type `bc.registry.notify.<provider>`, and data containing `notificationId`. Delivery validates the event type before processing it.
+The API uses the `gcp-queue` integration to send a CloudEvent to Pub/Sub. Each event identifies the API as its source, names the provider in its type (`bc.registry.notify.<provider>`), and includes a `notificationId`. The delivery worker checks the event type before processing it.
 
-### 3.5 BC Notify callback lifecycle
+### 3.5 Notify (BC) callback lifecycle
 
-After BC Notify or BC Notify Housing accepts a send, `notify-delivery` stores the provider response ID on the active `Notification`, marks it `SENT`, and does not create a history row or delete the notification/content. This response ID is used to correlate the asynchronous callback.
+After Notify (BC) or Notify (BC) Housing accepts a notification, `notify-delivery` saves the provider's response ID and marks the notification `SENT`. It keeps the notification and its content so the later callback can be matched to the send.
 
-BC Notify posts its status event to the authenticated `/api/v2/callback/` endpoint. The API stores each event in `bc_notify_callback`. Intermediate statuses leave the active notification in place. A `success` or `completed` status atomically marks the notification `DELIVERED`, writes `NotificationHistory` with the callback status and response ID, and removes the active notification and content. The stale-notification archive sweep excludes BC Notify `SENT` rows so they remain available for callback correlation.
+Notify (BC) sends status updates to the authenticated `/api/v2/callback/` endpoint. The API stores every update. Intermediate updates leave the notification active. A `success` or `completed` update marks it `DELIVERED`, writes its history, and removes the active notification and content. The archive job does not archive Notify (BC) notifications in `SENT`, because they may still receive a callback.
+
+### 3.6 Resend flow
+
+| Process | Timing / limits | Status / action |
+| --- | --- | --- |
+| `POST /api/v2/resend` → Pub/Sub | Every 30 minutes; Email Age 10 minutes–48 hours; 5 retries | Resend `Notification` record status in `PENDING`, `QUEUED`, `FAILURE`; success → `QUEUED` |
+| Archive | Email Age > 30 days | Unresolved → `EXPIRED`; retain Notify (BC) `SENT` for callback |
 
 ## 4. Data Stores
 
@@ -156,12 +164,12 @@ BC Notify posts its status event to the authenticated `/api/v2/callback/` endpoi
 
 **Important models:**
 
-- `Notification`: queued work, current status/provider, and pending BC Notify response ID
+- `Notification`: queued work, current status/provider, and pending Notify (BC) response ID
 - `Content`: email body and related content
 - `Attachment`: inline or URL-backed attachments
 - `NotificationHistory`: durable delivery result/history
 - `Callback`: legacy GC Notify callback state and response
-- `BCNotifyCallback`: BC Notify status event envelope and provider details
+- `BCNotifyCallback`: Notify (BC) status event envelope and provider details
 - `SafeList`: development recipient restriction
 
 **Migration owner:** `notify-api/migrations/`. Delivery depends on the resulting schema and compatible shared models.
@@ -181,10 +189,10 @@ Topic names, subscriptions, retry policy, dead-letter topics, and retention are 
 | Google Cloud Pub/Sub | Queue delivery work and invoke delivery handlers | `gcp-queue` integration and authenticated push |
 | PostgreSQL / Cloud SQL | Shared notification persistence | SQLAlchemy/pg8000 or psycopg |
 | GC Notify | Standard notification delivery | Provider adapter/API client |
-| BC Notify | Preferred standard and Housing delivery when enabled | Provider adapter/API client |
-| BC Notify callback | Asynchronous delivery status for BC Notify sends | Authenticated callback event at `/api/v2/callback/` |
+| Notify (BC) | Preferred standard and Housing delivery when enabled | Provider adapter/API client |
+| Notify (BC) callback | Asynchronous delivery status for Notify (BC) sends | Authenticated callback event at `/api/v2/callback/` |
 | SMTP | HTML, large-inline-attachment, or fallback delivery | SMTP provider adapter |
-| Housing service | STRR-specific notifications when BC Notify Housing is disabled | Housing provider adapter |
+| Housing service | STRR-specific notifications when Notify (BC) Housing is disabled | Housing provider adapter |
 | OIDC/JWT issuer | API authentication and role extraction | JWT/OIDC configuration |
 | MillionVerifier | Email validation, when configured | HTTP API |
 
@@ -286,7 +294,7 @@ These are recommendations, not committed delivery dates.
 | Term | Definition |
 | --- | --- |
 | API | Application Programming Interface; here, the authenticated `notify-api` service |
-| BC Notify | BC Government notification provider integration |
+| Notify (BC) | BC Government notification provider integration |
 | CloudEvent | Structured event envelope used between API and delivery |
 | GC Notify | Government of Canada Notify provider integration |
 | OCP | OpenShift Container Platform deployment path |
