@@ -112,11 +112,15 @@ The API checks these rules in order and uses the first match. Provider flags det
 
 | Email kind | Provider | Routing rule |
 | --- | --- | --- |
-| STRR / Housing | Notify (BC) Housing → GC Notify Housing → SMTP | `requestBy` is `STRR` (case-insensitive). Use the first enabled provider. |
+| HTML with an image | SMTP | The body contains an `<img>` element, including STRR emails and HTML mixed with Markdown. |
+| STRR / Housing | Notify (BC) Housing → GC Notify Housing → SMTP | The validated product (`NotificationRequest._product`) is `STRR`, or `requestBy` is `STRR` (case-insensitive). Use the first enabled provider. |
 | Large attachments | SMTP | Total decoded attachment content exceeds 6 MiB. |
-| HTML with an image | SMTP | The HTML body contains an `<img>` element. |
 | Long HTML | SMTP | The HTML body exceeds 50,000 characters. |
 | Other email | Notify (BC) → GC Notify → SMTP | Use the first enabled provider. |
+
+Image detection takes precedence over Housing routing. Housing routing takes precedence over attachment-size and HTML-length checks. The product check works even when `requestBy` differs or is missing. If `requestBy` is not a string and the product is not `STRR`, provider selection uses the default provider before evaluating these rules.
+
+Housing routing checks `enable-bc-notify-housing`, then `enable-gc-notify`, and falls back to SMTP. Default routing checks `enable-bc-notify`, then `enable-gc-notify`, and falls back to SMTP.
 
 ### 3.3 notify-delivery
 
