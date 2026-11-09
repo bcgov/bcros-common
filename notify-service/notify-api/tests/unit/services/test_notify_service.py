@@ -54,6 +54,57 @@ class TestNotifyServiceProviderSelection:
             assert provider == Notification.NotificationProvider.BC_NOTIFY_HOUSING
 
     @staticmethod
+    @pytest.mark.parametrize("request_by", ["other", "", None])
+    @pytest.mark.parametrize(
+        ("enabled_flags", "expected"),
+        [
+            (
+                {FeatureFlag.BC_NOTIFY, FeatureFlag.BC_NOTIFY_HOUSING},
+                Notification.NotificationProvider.BC_NOTIFY_HOUSING,
+            ),
+            ({FeatureFlag.BC_NOTIFY, FeatureFlag.GC_NOTIFY}, Notification.NotificationProvider.HOUSING),
+            ({FeatureFlag.BC_NOTIFY}, Notification.NotificationProvider.SMTP),
+        ],
+    )
+    def test_get_provider_strr_product(
+        app, request_by: str | None, enabled_flags: set[FeatureFlag], expected: str
+    ) -> None:
+        """The STRR product selects Housing independently of the requesting service."""
+        notification_request = NotificationRequest.model_construct(
+            recipients="test@example.com",
+            request_by=request_by,
+            content=ContentRequest(subject="Test", body="Plain text"),
+        )
+        notification_request._product = "STRR"
+        with (
+            app.app_context(),
+            patch(
+                "notify_api.services.notify_service.flags.is_on",
+                side_effect=lambda flag, default: flag in enabled_flags,
+            ),
+        ):
+            assert NotifyService.get_provider(request_by, "Plain text", notification_request) == expected
+
+    @staticmethod
+    @pytest.mark.parametrize("product", [None, "Business", "STRR"])
+    @pytest.mark.parametrize("body", ["Plain text", '<img src="cid:logo">'])
+    def test_get_provider_product_and_image_routing(app, product: str | None, body: str) -> None:
+        """Only STRR selects Housing, and image content always selects SMTP."""
+        notification_request = NotificationRequest.model_construct(
+            recipients="test@example.com",
+            request_by="other",
+            content=ContentRequest(subject="Test", body=body),
+        )
+        notification_request._product = product
+        expected = Notification.NotificationProvider.BC_NOTIFY
+        if product == "STRR":
+            expected = Notification.NotificationProvider.BC_NOTIFY_HOUSING
+        if body.startswith("<img"):
+            expected = Notification.NotificationProvider.SMTP
+        with app.app_context(), bc_notify_enabled():
+            assert NotifyService.get_provider("other", body, notification_request) == expected
+
+    @staticmethod
     def test_get_provider_html_content():
         """Test provider selection sends HTML content over 50000 characters through SMTP."""
         body = "<html><body>" + "x" * 50_000 + "</body></html>"
@@ -70,12 +121,22 @@ class TestNotifyServiceProviderSelection:
             assert provider == Notification.NotificationProvider.BC_NOTIFY
 
     @staticmethod
-    def test_get_provider_html_body_with_embedded_image_uses_smtp(app):
-        """HTML with an embedded image uses SMTP regardless of body length."""
+    @pytest.mark.parametrize("request_by", ["other", "STRR", "strr"])
+    @pytest.mark.parametrize(
+        "body",
+        [
+            '<html><body><img src="data:image/png;base64,AAAA"></body></html>',
+            '<IMG SRC="https://example.com/logo.png">',
+            '<img src="cid:logo" />',
+            '<p>**Business information**</p><img src="cid:logo">',
+            '# Business information\n<img src="https://example.com/logo.png">',
+        ],
+    )
+    def test_get_provider_html_body_with_embedded_image_uses_smtp(app, request_by: str, body: str) -> None:
+        """Image tags require SMTP regardless of requester, Markdown, or body length."""
         with app.app_context(), bc_notify_enabled():
             app.config["GC_NOTIFY_ENABLE"] = True
-            body = '<html><body><img src="data:image/png;base64,AAAA"></body></html>'
-            provider = NotifyService.get_provider("other", body)
+            provider = NotifyService.get_provider(request_by, body)
             assert provider == Notification.NotificationProvider.SMTP
 
     @staticmethod

@@ -91,12 +91,13 @@ class NotifyService:
         Args:
             request_by: The service requesting the notification.
             content_body: The email body content to analyze.
-            notification_request: The full notification request to check for attachments.
+            notification_request: The full notification request to check for product and attachments.
 
         Returns:
             The appropriate notification provider.
         """
-        if not isinstance(request_by, str):
+        product = notification_request._product if notification_request else None
+        if not isinstance(request_by, str) and product != STRR_REQUEST_IDENTIFIER:
             logger.warning(f"Invalid request_by parameter type: {type(request_by)}, using the default provider")
             return cls._get_default_provider()
 
@@ -104,7 +105,12 @@ class NotifyService:
         # otherwise the default provider is resolved from the feature flags.
         provider_rules = [
             (
-                lambda: request_by.upper() == STRR_REQUEST_IDENTIFIER,
+                lambda: content_body and cls._contains_html_image(content_body),
+                Notification.NotificationProvider.SMTP,
+                "SMTP provider for HTML content containing an image",
+            ),
+            (
+                lambda: product == STRR_REQUEST_IDENTIFIER or request_by.upper() == STRR_REQUEST_IDENTIFIER,
                 cls._get_housing_provider,
                 "HOUSING provider for STRR request",
             ),
@@ -112,11 +118,6 @@ class NotifyService:
                 lambda: notification_request and cls._has_large_attachments(notification_request),
                 Notification.NotificationProvider.SMTP,
                 "SMTP provider for large attachments (>6MB)",
-            ),
-            (
-                lambda: content_body and cls._contains_html_image(content_body),
-                Notification.NotificationProvider.SMTP,
-                "SMTP provider for HTML content containing an image",
             ),
             (
                 lambda: content_body and len(content_body) > MAX_HTML_BODY_LENGTH and cls._contains_html(content_body),
@@ -239,9 +240,6 @@ class NotifyService:
     @classmethod
     def _contains_html_image(cls, content: str) -> bool:
         """Check whether HTML content contains an image element."""
-        if not cls._contains_html(content):
-            return False
-
         try:
             html_detector = _HTMLTagDetector()
             html_detector.feed(content)
