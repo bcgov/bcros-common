@@ -582,7 +582,7 @@
             <div class="details-main">
               {% if corpName %}
               {{corpName}}
-              {% else %}
+              {% elif invoice.paymentAccount.accountName %}
               {{invoice.paymentAccount.accountName}}
               {% endif %}
             </div>
@@ -609,6 +609,7 @@
               </div>
             </div>
             {% endif %}
+            {% if invoice.paymentAccount.accountId %}
             <div class="detail-row">
               <div class="detail-label">
                 Account Number:
@@ -617,6 +618,7 @@
                 {{invoice.paymentAccount.accountId}}
               </div>
             </div>
+            {% endif %}
             {% if businessNumber %}
             <div class="detail-row">
               <div class="detail-label">
