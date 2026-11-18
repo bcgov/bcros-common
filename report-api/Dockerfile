@@ -1,4 +1,4 @@
-FROM python:3.12.2-bullseye
+FROM python:3.12.2-bookworm
 
 ARG VCS_REF="missing"
 ARG BUILD_DATE="missing"
