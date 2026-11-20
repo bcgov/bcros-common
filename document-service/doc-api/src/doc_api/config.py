@@ -22,22 +22,7 @@ or by accessing this configuration directly.
 import json
 import os
 
-import requests
 from cloud_sql_connector import DBConfig
-
-
-def get_mock_auth() -> str:
-    """For CI unit tests get mock auth value."""
-    try:
-        url: str = "https://test.api.connect.gov.bc.ca/mockTarget/auth/api/v1/testing/mock-sa-doc"
-        headers = {"Content-Type": "application/json"}
-        response = requests.get(url, headers=headers, timeout=10.0)
-        if response and response.text:
-            resp_json = json.loads(response.text)
-            return resp_json.get("response", "")
-        return ""
-    except Exception:
-        return ""
 
 
 class Config:  # pylint: disable=too-few-public-methods
@@ -128,8 +113,6 @@ class Config:  # pylint: disable=too-few-public-methods
     SUBSCRIPTION_API_KEY = os.getenv("SUBSCRIPTION_API_KEY")
 
     DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "development")
-    if not GCP_AUTH_KEY and DEPLOYMENT_ENV in ("unitTesting", "testing"):
-        GCP_AUTH_KEY = get_mock_auth()
 
     cert_stamp_config = os.getenv("DOC_CERT_STAMP_CONFIG")
     DOC_CERT_STAMP_CONFIG = json.loads(cert_stamp_config) if cert_stamp_config else {}
