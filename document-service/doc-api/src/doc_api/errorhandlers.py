@@ -45,7 +45,10 @@ def handle_http_error(error):
     if isinstance(error, RoutingException):
         return error
 
-    logger.error(f"Http exception {error.description}")
+    if error.code and error.code < 500:
+        logger.warning(f"Http exception {error.description}")
+    else:
+        logger.error(f"Http exception {error.description}")
     response = jsonify({"errors": error.description})
     response.status_code = error.code
     return response
