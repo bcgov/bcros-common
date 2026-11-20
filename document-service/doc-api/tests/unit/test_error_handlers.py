@@ -16,7 +16,9 @@
 Test-Suite to ensure that the error handlers are working as expected.
 """
 import logging
+from unittest.mock import patch
 
+import pytest
 from werkzeug.exceptions import HTTPException
 from werkzeug.routing import RoutingException
 
@@ -38,6 +40,20 @@ def test_handle_http_error_pass(app):
         response = errorhandlers.handle_http_error(err)
 
         assert response.status_code == 200
+
+
+@pytest.mark.parametrize("code,level", [(404, "warning"), (401, "warning"), (500, "error"), (503, "error")])
+def test_handle_http_error_log_level(app, code, level):
+    """Assert that 4xx errors log a warning and 5xx errors log an error."""
+    with app.app_context(), patch.object(errorhandlers, "logger") as mock_logger:
+        err = HTTPException(description="description")
+        err.code = code
+        response = errorhandlers.handle_http_error(err)
+
+        assert response.status_code == code
+        getattr(mock_logger, level).assert_called_once()
+        other = "error" if level == "warning" else "warning"
+        getattr(mock_logger, other).assert_not_called()
 
 
 def test_handle_uncaught_error(app, caplog):
