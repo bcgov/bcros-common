@@ -18,7 +18,6 @@ import os
 
 from flask import current_app
 
-from doc_api.config import get_mock_auth
 from doc_api.services.gcp_auth.auth_service import GoogleAuthService
 
 
@@ -45,12 +44,10 @@ def test_get_credentials(session, client, jwt):
 def test_get_cs_signed_credentials(session, client, jwt):
     """Assert that the configuration to get a google storage token works as expected (no exceptions)."""
     credentials = GoogleAuthService.get_cs_signed_credentials()
-    if current_app.config.get("GCP_AUTH_KEY"):
-        assert credentials
-        assert credentials.token
-        assert credentials.service_account_email
-    else:
-        assert not credentials
+    # Without a key this falls back to application default credentials.
+    assert credentials
+    assert credentials.token
+    assert credentials.service_account_email
 
 
 def test_get_report_token(session, client, jwt):
@@ -81,9 +78,3 @@ def test_security_account(session, client, jwt):
         assert decoded_sa.get("token_uri")
         assert decoded_sa.get("auth_provider_x509_cert_url")
         assert decoded_sa.get("client_x509_cert_url")
-
-
-def test_mock_auth(session, client, jwt):
-    """Assert that the mock auth sa works as expected."""
-    value = get_mock_auth()
-    assert value
