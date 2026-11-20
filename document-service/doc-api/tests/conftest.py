@@ -15,10 +15,11 @@
 import datetime
 import os
 from contextlib import contextmanager
-from types import SimpleNamespace
 
+import google.auth
 import pytest
 from google.api_core.exceptions import NotFound
+from google.auth.credentials import AnonymousCredentials
 
 from doc_api import create_app
 from doc_api import jwt as _jwt
@@ -85,24 +86,35 @@ class _FakeStorageClient:
         return _FakeBucket(name)
 
 
-@pytest.fixture(autouse=True)
-def offline_gcp(monkeypatch):
+class _FakeCredentials(AnonymousCredentials):
+    """Placeholder application default credentials for keyless unit test runs."""
+
+    def __init__(self):
+        super().__init__()
+        self.token = "unit-test-token"
+        self.service_account_email = "unit-test@example.iam.gserviceaccount.com"
+
+    def refresh(self, request):  # pylint: disable=unused-argument
+        """Nothing to refresh."""
+
+
+@pytest.fixture(scope="session", autouse=True)
+def offline_gcp():
     """Without a GCP_AUTH_KEY (CI is keyless), keep tests off real Google Cloud APIs.
 
-    Cloud Storage is replaced with an in-memory fake, the ADC fallback used for signed links
-    returns placeholder credentials, and no ID token is requested for the report service.
+    Session scoped so it is in place before the app (and its Pub/Sub publisher) is created.
+    Application default credentials return placeholder credentials, Cloud Storage is replaced
+    with an in-memory fake, and no ID token is requested for the report service.
     With a GCP_AUTH_KEY set locally, the tests still run against the real services.
     """
     if os.getenv("GCP_AUTH_KEY"):
+        yield
         return
-    monkeypatch.setattr(storage_service.storage, "Client", _FakeStorageClient)
-    fake_credentials = SimpleNamespace(
-        token="unit-test-token",
-        service_account_email="unit-test@example.iam.gserviceaccount.com",
-        refresh=lambda request: None,
-    )
-    monkeypatch.setattr(auth_service.google.auth, "default", lambda *args, **kwargs: (fake_credentials, None))
-    monkeypatch.setattr(auth_service.google.oauth2.id_token, "fetch_id_token", lambda *args, **kwargs: None)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(google.auth, "default", lambda *args, **kwargs: (_FakeCredentials(), None))
+        patch.setattr(storage_service.storage, "Client", _FakeStorageClient)
+        patch.setattr(auth_service.google.oauth2.id_token, "fetch_id_token", lambda *args, **kwargs: None)
+        yield
 
 
 @contextmanager
