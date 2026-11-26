@@ -32,6 +32,8 @@ class FeatureFlag(StrEnum):
     BC_NOTIFY_HOUSING = "enable-bc-notify-housing"
     BC_NOTIFY_SMS = "enable-bc-notify-sms"
     BC_NOTIFY_HOUSING_SMS = "enable-bc-notify-housing-sms"
+    QUEUE_EMAILS = "queue-emails"
+    QUEUE_SMS = "queue-sms"
 
 
 class Flags:

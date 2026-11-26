@@ -122,6 +122,8 @@ Image detection takes precedence over Housing routing. Housing routing takes pre
 
 Housing routing checks `enable-bc-notify-housing`, then `enable-gc-notify`, and falls back to SMTP. Default routing checks `enable-bc-notify`, then `enable-gc-notify`, and falls back to SMTP.
 
+**Hold flags.** The `queue-emails` flag holds email and the `queue-sms` flag holds SMS. Without LaunchDarkly, they fall back to the `QUEUE_EMAILS` and `QUEUE_SMS` settings, which default to off. While a flag is on, the API still selects a provider and stores each notification. It saves the notification with status `HELD`, returns `notifyStatus: HELD`, and does not publish it to Pub/Sub. The resend job skips the held channel. After the flag is turned off, the next resend run publishes each `HELD` notification, regardless of its age.
+
 ### 3.3 notify-delivery
 
 **Purpose:** Receive queued work, load the notification, send it through the selected provider, and record the result. Notify (BC) and Notify (BC) Housing notifications stay in `SENT` until the provider sends a final status callback.
@@ -156,7 +158,9 @@ Notify (BC) sends status updates to the authenticated `/api/v2/callback/` endpoi
 | Process | Timing / limits | Status / action |
 | --- | --- | --- |
 | `POST /api/v2/resend` → Pub/Sub | Every 30 minutes; Email Age 10 minutes–48 hours; 5 retries | Resend `Notification` record status in `PENDING`, `QUEUED`, `FAILURE`; success → `QUEUED` |
-| Archive | Email Age > 30 days | Unresolved → `EXPIRED`; retain Notify (BC) `SENT` for callback |
+| Release held work | Any age; no retry limit | `HELD` → `QUEUED` after the channel's hold flag is turned off |
+| Hold flags on | `queue-emails` / `queue-sms` | Skip that channel; when both flags are on, skip the whole job, including archiving |
+| Archive | Email Age > 30 days | Unresolved → `EXPIRED`; retain Notify (BC) `SENT` for callback; never archive `HELD` |
 
 ## 4. Data Stores
 

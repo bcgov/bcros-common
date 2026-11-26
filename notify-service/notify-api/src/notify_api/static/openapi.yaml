@@ -43,7 +43,9 @@ paths:
       tags:
         - Notifications (v1)
       summary: Send notification
-      description: Create and send an EMAIL notification
+      description: |
+        Create and send an EMAIL notification. While the `queue-emails` flag is on, the email is stored
+        with `notifyStatus` `HELD` and sent by the resend job after the flag is turned off.
       operationId: sendNotification
       security:
         - bearerAuth: []
@@ -240,7 +242,9 @@ paths:
       tags:
         - Resend (v2)
       summary: Resend notifications
-      description: Resend failed notifications
+      description: |
+        Resend failed notifications and release `HELD` notifications (regardless of age). Email is
+        skipped while `queue-emails` is on and SMS while `queue-sms` is on; with both on, nothing runs.
       operationId: resend
       security:
         - bearerAuth: []
@@ -262,6 +266,8 @@ paths:
         Requests with `requestBy` of `STRR` are sent through BC Notify Housing SMS. The send is
         controlled by the `enable-bc-notify-sms` (or `enable-bc-notify-housing-sms`) feature flag;
         when the flag is off the request is not queued and `notifyStatus` is `FAILURE`.
+        While the `queue-sms` flag is on, the SMS is stored with `notifyStatus` `HELD` and sent by the
+        resend job after the flag is turned off.
       operationId: sendSms
       security:
         - bearerAuth: []
@@ -273,7 +279,7 @@ paths:
               $ref: "#/components/schemas/SmsRequest"
       responses:
         "200":
-          description: SMS processed; check `notifyStatus` for QUEUED or FAILURE
+          description: SMS processed; check `notifyStatus` for QUEUED, HELD, or FAILURE
           content:
             application/json:
               schema:
@@ -396,7 +402,7 @@ components:
           enum: [EMAIL, TEXT]
         notifyStatus:
           type: string
-          enum: [PENDING, QUEUED, SENT, DELIVERED, FAILURE, FORWARDED, EXPIRED]
+          enum: [PENDING, QUEUED, SENT, DELIVERED, FAILURE, FORWARDED, EXPIRED, HELD]
         notifyProvider:
           type: string
           enum:
