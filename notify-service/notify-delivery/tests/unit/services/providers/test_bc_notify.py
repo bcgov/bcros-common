@@ -187,6 +187,11 @@ class TestBCNotify(unittest.TestCase):
             ),
             ("**Hello**\n\nParagraph\n", "**Hello**\n\nParagraph\n"),
             ("**Code**\n```\na = 1\nb = 2\n```\nafter", "**Code**  \n```\na = 1\nb = 2\n```\nafter"),
+            (
+                "**Branch**\\\nMinistry\n**Unit:** 1\\\n**City:** Victoria",
+                "**Branch**\\\nMinistry  \n**Unit:** 1\\\n**City:** Victoria",
+            ),
+            ("**Path:** C:\\\\\nnext", "**Path:** C:\\\\  \nnext"),
         )
         for body, expected in examples:
             with self.subTest(body=body):

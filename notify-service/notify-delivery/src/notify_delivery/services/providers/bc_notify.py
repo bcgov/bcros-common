@@ -164,6 +164,9 @@ class BCNotify:
                 continue
             if in_fence or not line.strip() or not lines[index + 1].strip():
                 continue
+            # already a hard break (trailing unescaped backslash), adding spaces would show the backslash
+            if re.search(r"(?<!\\)(?:\\\\)*\\$", line):
+                continue
             lines[index] = line.rstrip() + "  "
         return "\n".join(lines)
 
