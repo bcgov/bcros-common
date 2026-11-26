@@ -47,6 +47,7 @@ REPORT_FILES = {"index.html": "", "header.html": "", "footer.html": ""}
 CERTIFIED_COPY_PATH_LEGACY: str = "{templates}/static/certified-copy-legacy.png"
 CERTIFIED_COPY_PATH: str = "{templates}/static/certified-copy.png"
 FORM_STAMP_PATH: str = "{templates}/static/form-stamp.jpeg"
+COURT_ORDER_STAMP_PATH: str = "{templates}/static/court-order-stamp.png"
 CERTIFIED_COPY_TEXT_POINT_LEGACY = pymupdf.Point(423, 212)
 CERTIFIED_COPY_IMAGE_RECT_LEGACY = pymupdf.Rect(450.0, 145.0, 525.0, 205.0)
 CERTIFIED_COPY_TEXT_POINT_CONVERSION = pymupdf.Point(195, 212)
@@ -56,6 +57,13 @@ CERTIFIED_COPY_IMAGE_RECT = pymupdf.Rect(460.0, 142.0, 535.0, 202.0)
 CERTIFIED_COPY_REMOVE_RECT = pymupdf.Rect(450.0, 145.0, 600.0, 225.0)
 CERTIFIED_COPY_STAFF_REMOVE_RECT = pymupdf.Rect(485.0, 30.0, 560.0, 105.0)
 APP_FILING_TYPE_CONVERSION: str = "CONVL"
+# Possibly move to env var if pattern of changing over time.
+COURT_ORDER_STAMP_CONFIG = {
+    "documentTypes": ["CRTO", "SUPP"],
+    "textCoordX": 182,
+    "textCoordY": 17,
+    "rect": {"coordX1": 275.0, "coordY1": 5.0, "coordX2": 440.0, "coordY2": 20.0},
+}
 
 
 class ReportTypes(BaseEnum):
@@ -77,6 +85,7 @@ class Config:  # pylint: disable=too-few-public-methods
     CERTIFIED_COPY_DATA_LEGACY = None
     CERTIFIED_COPY_DATA = None
     FORM_STAMP_DATA = None
+    COURT_ORDER_STAMP_DATA = None
 
     @classmethod
     def get_header_template(cls) -> str:
@@ -191,6 +200,17 @@ class Config:  # pylint: disable=too-few-public-methods
                 cls.FORM_STAMP_DATA = image_data_file.read()
                 image_data_file.close()
         return cls.FORM_STAMP_DATA
+
+    @classmethod
+    def get_court_order_stamp_image(cls) -> bytes:
+        """Get the image data for the new form stamp."""
+        if cls.COURT_ORDER_STAMP_DATA is None:
+            template_path: str = current_app.config.get("REPORT_TEMPLATE_PATH")
+            image_file = COURT_ORDER_STAMP_PATH.format(templates=template_path)
+            with open(image_file, "rb") as image_data_file:
+                cls.COURT_ORDER_STAMP_DATA = image_data_file.read()
+                image_data_file.close()
+        return cls.COURT_ORDER_STAMP_DATA
 
 
 def get_header_data(title: str, subtitle: str = "") -> str:
@@ -482,10 +502,21 @@ def get_form_stamp_image() -> bytes:
     return Config().get_form_stamp_image()
 
 
+def get_court_order_stamp_image() -> bytes:
+    """Get the image data for the court order stamp."""
+    return Config().get_court_order_stamp_image()
+
+
 def get_form_stamp_date() -> str:
     """Convert date in the Form stamp date format."""
     local_datetime = _datetime.now(pytz.timezone("America/Vancouver"))
     return local_datetime.strftime("%b %d %Y").upper()
+
+
+def get_court_order_stamp_date(filing_ts=None) -> str:
+    """Format date for the client court order documents stamp as Mon DD, YYYY: Nov 11, 2026."""
+    local_datetime = model_utils.to_local_timestamp(filing_ts) if filing_ts else model_utils.today_local()
+    return local_datetime.strftime("%b %d, %Y")
 
 
 def get_app_report_datetime() -> str:
@@ -558,6 +589,39 @@ def add_doc_form_stamp(doc_data: bytes, form_config: dict) -> bytes:
     )
     page.insert_image(image_rect, stream=image_data)
     page.insert_text(point, add_text, fontsize=6, fontname="Helvetica-Bold", color=(0, 0, 0))  # Black color
+    updated_report = doc.tobytes(garbage=3, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
+    doc.close()
+    return updated_report
+
+
+def get_court_order_stamp_config(doc_type: str) -> dict:
+    """For client submitted court order documents look up the stamp position information."""
+    if not doc_type or doc_type not in COURT_ORDER_STAMP_CONFIG.get("documentTypes"):
+        return {}
+    return copy.deepcopy(COURT_ORDER_STAMP_CONFIG)
+
+
+def add_doc_court_order_stamp(doc_data: bytes, stamp_config: dict, filing_ts=None) -> bytes:
+    """Add the court order stamp image and date text to the document."""
+    if not doc_data or not stamp_config:
+        return doc_data
+
+    image_data = get_court_order_stamp_image()
+    doc = pymupdf.Document(stream=doc_data)
+    page = doc[0]
+    x_coord: int = stamp_config.get("textCoordX")
+    y_coord: int = stamp_config.get("textCoordY")
+    point = pymupdf.Point(x_coord, y_coord)
+    add_text = " on " + get_court_order_stamp_date(filing_ts) + " |"
+    config_rect = stamp_config.get("rect")
+    image_rect = pymupdf.Rect(
+        config_rect.get("coordX1"), config_rect.get("coordY1"), config_rect.get("coordX2"), config_rect.get("coordY2")
+    )
+    page.insert_image(image_rect, stream=image_data)
+    page.insert_text(point, "Filed", fontsize=10, fontname="Helvetica-Bold", color=(0, 0, 0))  # Black color
+    x_coord += pymupdf.get_text_length("Filed", fontname="Helvetica-Bold", fontsize=10)
+    point = pymupdf.Point(x_coord, y_coord)
+    page.insert_text(point, add_text, fontsize=10, fontname="Helvetica", color=(0, 0, 0))  # Black color
     updated_report = doc.tobytes(garbage=3, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
     doc.close()
     return updated_report
