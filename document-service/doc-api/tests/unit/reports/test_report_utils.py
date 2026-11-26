@@ -57,6 +57,12 @@ TEST_CONVERSION_REPORT_FILENAME = [
     ("BC1191518-CONVL-annualReport.pdf", False),
     ("BC1191518-ICORP-FILING.pdf", False),
 ]
+# testdata pattern is ({doc_type}, {stamp_config})
+TEST_COURT_ORDER_STAMP_DATA = [
+    ("APCO", None),
+    ("CRTO", report_utils.COURT_ORDER_STAMP_CONFIG),
+    ("SUPP", report_utils.COURT_ORDER_STAMP_CONFIG),
+]
 
 
 @pytest.mark.parametrize("filename, is_conversion", TEST_CONVERSION_REPORT_FILENAME)
@@ -145,3 +151,16 @@ def get_json_from_file(data_file: str):
     # print(text_data)
     json_data = json.loads(text_data)
     return json_data
+
+
+@pytest.mark.parametrize("doc_type,stamp_config", TEST_COURT_ORDER_STAMP_DATA)
+def test_court_order_stamp_config(session, doc_type, stamp_config):
+    """Assert that court order documents stamp configuration set up works as expected."""
+    doc_config = report_utils.get_court_order_stamp_config(doc_type)
+    if not stamp_config:
+        assert not doc_config
+    else:
+        assert doc_config
+        assert doc_config.get("textCoordX") == stamp_config.get("textCoordX")
+        assert doc_config.get("textCoordY") == stamp_config.get("textCoordY")
+        assert doc_config.get("rect") == stamp_config.get("rect")

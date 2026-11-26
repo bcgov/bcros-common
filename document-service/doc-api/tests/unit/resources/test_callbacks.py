@@ -34,9 +34,12 @@ from tests.unit.services.utils import create_header_account_upload
 
 MOCK_AUTH_URL = "https://test.api.connect.gov.bc.ca/mockTarget/auth/api/v1/"
 TEST_FORMFILE = "tests/unit/reports/data/form47-correction.pdf"
+TEST_COURT_ORDER_DOC = "tests/unit/reports/data/court-order-1.pdf"
 STAFF_ROLES = [STAFF_ROLE, BC_REGISTRY]
 MEDIA_PDF = model_utils.CONTENT_TYPE_PDF
 PATH_FORM1: str = "/api/v1/documents/CORP/APCO?consumerIdentifier=BC1234567&consumerFilename=test.pdf"
+PATH_CO_CRTO: str = "/api/v1/documents/CORP/CRTO?consumerIdentifier=BC2100000&consumerFilename=co-crto.pdf"
+PATH_CO_SUPP: str = "/api/v1/documents/CORP/SUPP?consumerIdentifier=BC2100000&consumerFilename=co-supp.pdf"
 
 TEST_DATAFILE = "tests/unit/services/unit_test.pdf"
 PARAM_TEST_APIKEY = "?x-apikey={api_key}"
@@ -93,6 +96,22 @@ TEST_UPDATE_BUSINESS_API_2 = {
     "consumerIdentifier": "BC1108924",
     "consumerReferenceId": "1629808",
     "consumerFilingDate": "2026-06-09T23:02:02+00:00"
+}
+TEST_UPDATE_BUSINESS_API_3 = {
+    "accountId": "business-api",
+    "documentServiceId": "DS9000101952",
+    "consumerIdentifier": "BC2100000",
+    "consumerReferenceId": "31000000",
+    "consumerFilingDate": "2026-11-11T23:02:02+00:00"
+}
+TEST_UPDATE_BUSINESS_API_WRAPPED_3 = {
+    "data": {
+        "accountId": "business-api",
+        "fileKey": "CORP-DS9000101952",
+        "businessIdentifier": "BC2100000",
+        "filingId": 31000000,
+        "filingDate": "2026-11-11T23:02:02+00:00"
+    }
 }
 TEST_UPDATE_BUSINESS_API_WRAPPED = {
     "data": {
@@ -171,6 +190,8 @@ TEST_CREATE_LEGACY_SCAN_DATA = [
 # testdata pattern is ({description}, {payload_json}, {status}, {create_path}, {upload_file})
 TEST_UPDATE_STAMP_DATA = [
     ("Valid form stamp doc", TEST_UPDATE_BUSINESS_API_2, HTTPStatus.OK, PATH_FORM1, TEST_FORMFILE),
+    ("Valid court order CRTO doc", TEST_UPDATE_BUSINESS_API_3, HTTPStatus.OK, PATH_CO_CRTO, TEST_COURT_ORDER_DOC),
+    ("Valid court order SUPP doc", TEST_UPDATE_BUSINESS_API_WRAPPED_3, HTTPStatus.OK, PATH_CO_SUPP, TEST_COURT_ORDER_DOC),
 ]
 
 
@@ -185,12 +206,19 @@ def test_update_with_stamp(session, client, jwt, desc, update_json, status, crea
     with open(upload_file, "rb") as data_file:
         raw_data = data_file.read()
         data_file.close()
+    if desc == "Valid court order SUPP doc":  # Create a CRTO doc record first.
+        response = client.post(PATH_CO_CRTO, data=raw_data, headers=headers, content_type=MEDIA_PDF)
+
     response = client.post(create_path, data=raw_data, headers=headers, content_type=MEDIA_PDF)
-    logger.info(response.json)
+    # logger.info(response.json)
     assert response.status_code == HTTPStatus.CREATED
     payload = copy.deepcopy(update_json)
-    payload["documentServiceId"] = response.json.get("documentServiceId")
-    payload["consumerIdentifier"] = response.json.get("consumerIdentifier")
+    if payload.get("data"):
+        payload["data"]["fileKey"] = "CORP-" + response.json.get("documentServiceId")
+        payload["data"]["businessIdentifier"] = response.json.get("consumerIdentifier")
+    else:
+        payload["documentServiceId"] = response.json.get("documentServiceId")
+        payload["consumerIdentifier"] = response.json.get("consumerIdentifier")
     update_path = DOC_REC_UPDATE_PATH
     api_key = current_app.config.get("SUBSCRIPTION_API_KEY")
     update_path += PARAM_TEST_APIKEY.format(api_key=api_key)

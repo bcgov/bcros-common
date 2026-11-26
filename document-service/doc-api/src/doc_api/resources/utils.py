@@ -20,7 +20,12 @@ from doc_api.exceptions import ResourceErrorCodes
 from doc_api.models import Document, DocumentRequest, DocumentScanning, User, db, search_utils
 from doc_api.models import utils as model_utils
 from doc_api.models.type_tables import DocumentClasses, DocumentTypes, ProductCodes, RequestTypes
-from doc_api.reports.report_utils import add_doc_certified_copy, add_doc_form_stamp
+from doc_api.reports.report_utils import (
+    add_doc_certified_copy,
+    add_doc_court_order_stamp,
+    add_doc_form_stamp,
+    get_court_order_stamp_config,
+)
 from doc_api.services.abstract_storage_service import DocumentTypes as StorageDocTypes
 from doc_api.services.document_storage.storage_service import GoogleStorageService
 from doc_api.utils import request_validator
@@ -639,8 +644,10 @@ def save_callback_update_rec(info: RequestInfo, document: Document) -> dict:
     db.session.add(doc_request)
     db.session.commit()
     doc_json = document.json
-    logger.info("save_callback_update_rec completed...")
+    logger.info("save_callback_update_rec document record updates completed...conditionally adding stamp.")
     add_form_stamp(document, info.request_data)
+    add_court_order_stamp(document, info.request_data)
+    logger.info("save_callback_update_rec completed.")
     return doc_json
 
 
@@ -801,3 +808,36 @@ def add_form_stamp(document: Document, request_info: dict):
         logger.info(f"Save doc to storage {document.document_service_id} {storage_name} successful.")
     except Exception as e:  # noqa: B902; return nicer default error
         logger.error(f"add_form_stamp failed for doc id={document.document_service_id}: {e}")
+
+
+def add_court_order_stamp(document: Document, request_info: dict):
+    """Conditionally add the court order stamp to an existing document based on the document type."""
+    if not document.doc_storage_url:
+        return
+    if not request_info.get(PARAM_CONSUMER_REFERENCE_ID) or not request_info.get(PARAM_CONSUMER_FILEDATE):
+        return
+    stamp_config = get_court_order_stamp_config(document.document_type)
+    if not stamp_config:
+        return
+    if document.document_type == DocumentTypes.SUPP.value:
+        has_crto: bool = False
+        # Only add stamp to SUPP supporting doc type if court order CRTO doc exists for the filing.
+        docs = Document.find_by_consumer_id(document.consumer_identifier, DocumentTypes.CRTO.value)
+        for doc in docs:
+            if doc.consumer_reference_id is None or doc.consumer_reference_id == document.consumer_reference_id:
+                has_crto = True
+                break
+        if not has_crto:
+            logger.info(f"Doc Service ID {document.document_service_id} SUPP type without filing CRTO: skipping stamp.")
+            return
+
+    storage_type = get_doc_storage_type(document.document_class)
+    storage_name = document.doc_storage_url
+    logger.info(f"add_court_order_stamp {storage_type} updating {document.document_service_id} {storage_name}")
+    try:
+        doc_data = GoogleStorageService.get_document(storage_name, storage_type)
+        updated_data = add_doc_court_order_stamp(doc_data, stamp_config, document.consumer_filing_date)
+        GoogleStorageService.save_document(storage_name, updated_data, storage_type, model_utils.CONTENT_TYPE_PDF)
+        logger.info(f"Save doc to storage {document.document_service_id} {storage_name} successful.")
+    except Exception as e:  # noqa: B902; return nicer default error
+        logger.error(f"add_court_order_stamp failed for doc id={document.document_service_id}: {e}")

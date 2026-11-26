@@ -22,6 +22,7 @@ from http import HTTPStatus
 
 import pytest
 
+from doc_api.models import utils as model_utils
 from doc_api.reports.report import Report, report_utils
 from doc_api.reports.report_utils import ReportTypes
 from doc_api.resources.utils import get_certified_copy_config, get_form_stamp_config
@@ -47,6 +48,8 @@ CERT_COPY_TEST_COOP_STAFF_INFILE2 = "tests/unit/reports/data/coop-mem-filing-sta
 CERT_COPY_TEST_COOP_STAFF_OUTFILE2 = "tests/unit/reports/data/coop-mem-filing-staff-ex1.pdf"
 CERT_COPY_TEST_FORM_INFILE = "tests/unit/reports/data/form47-correction.pdf"
 CERT_COPY_TEST_FORM_OUTFILE = "tests/unit/reports/data/form-stamp-{doc_type}.pdf"
+COURT_ORDER_TEST_INFILE = "tests/unit/reports/data/court-order-1.pdf"
+COURT_ORDER_TEST_OUTFILE = "tests/unit/reports/data/court-order-ex1.pdf"
 
 
 # testdata pattern is ({legacy}, {conversion}, {infile}, {outfile})
@@ -65,6 +68,13 @@ TEST_DOC_CERT_COPY_DATA = [
 TEST_DOC_FORM_STAMP_DATA = [
     ("CORP", "APCO", CERT_COPY_TEST_FORM_INFILE, CERT_COPY_TEST_FORM_OUTFILE),
     ("CORP", "JUNK", CERT_COPY_TEST_FORM_INFILE, CERT_COPY_TEST_FORM_OUTFILE),
+]
+# testdata pattern is ({doc_type}, {filing_ts}, {infile}, {outfile})
+TEST_COURT_ORDER_STAMP_DATA = [
+    ("CRTO", None, COURT_ORDER_TEST_INFILE, COURT_ORDER_TEST_OUTFILE),
+    ("SUPP", None, COURT_ORDER_TEST_INFILE, COURT_ORDER_TEST_OUTFILE),
+    ("CRTO", "2026-11-11T08:00:01+00:00", COURT_ORDER_TEST_INFILE, COURT_ORDER_TEST_OUTFILE),
+    ("APCO", None, CERT_COPY_TEST_COOP_STAFF_INFILE2, CERT_COPY_TEST_COOP_STAFF_OUTFILE2),
 ]
 
 
@@ -155,7 +165,7 @@ def test_doc_add_certified(session, client, jwt, doc_class, doc_type, infile, ou
 
 @pytest.mark.parametrize("doc_class,doc_type,infile,outfile", TEST_DOC_FORM_STAMP_DATA)
 def test_doc_add_form_stamp(session, client, jwt, doc_class, doc_type, infile, outfile):
-    """Assert that adding a certified copy image and date and time to an client document works as expected."""
+    """Assert that adding a form stamp to a client document works as expected."""
     raw_data = None
     stamp_config = get_form_stamp_config(doc_type)
     if stamp_config:
@@ -164,6 +174,23 @@ def test_doc_add_form_stamp(session, client, jwt, doc_class, doc_type, infile, o
             data_file.close()
 
         updated_pdf = report_utils.add_doc_form_stamp(raw_data, stamp_config)
+        with open(outfile.format(doc_type=doc_type), "wb") as pdf_file:
+            pdf_file.write(updated_pdf)
+            pdf_file.close()
+
+
+@pytest.mark.parametrize("doc_type,filing_ts,infile,outfile", TEST_COURT_ORDER_STAMP_DATA)
+def test_doc_add_court_order_stamp(session, client, jwt, doc_type, filing_ts, infile, outfile):
+    """Assert that adding a court order stamp to a client document works as expected."""
+    raw_data = None
+    stamp_config = report_utils.get_court_order_stamp_config(doc_type)
+    if stamp_config:
+        stamp_ts = model_utils.ts_from_iso_format(filing_ts) if filing_ts else None
+        with open(infile, 'rb') as data_file:
+            raw_data = data_file.read()
+            data_file.close()
+
+        updated_pdf = report_utils.add_doc_court_order_stamp(raw_data, stamp_config, stamp_ts)
         with open(outfile.format(doc_type=doc_type), "wb") as pdf_file:
             pdf_file.write(updated_pdf)
             pdf_file.close()
@@ -246,5 +273,34 @@ def test_add_form_stamp(session, client, jwt):
     updated_pdf = doc.tobytes(garbage=3, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
     doc.close()
     with open(outfile.format(doc_type="APCO"), "wb") as pdf_file:
+        pdf_file.write(updated_pdf)
+        pdf_file.close()
+
+
+def test_add_court_order_stamp(session, client, jwt):
+    """Assert that adding a court order image and date to a new client court order document works as expected."""
+    raw_data = None
+    image_data = report_utils.get_court_order_stamp_image()
+    infile = COURT_ORDER_TEST_INFILE
+    outfile = COURT_ORDER_TEST_OUTFILE
+    with open(infile, 'rb') as data_file:
+        raw_data = data_file.read()
+        data_file.close()
+    doc = pymupdf.Document(stream=raw_data)
+    page = doc[0]
+
+    x_coord: int = 182
+    point = pymupdf.Point(x_coord, 17)
+    add_text = " on " + report_utils.get_court_order_stamp_date() + " |"
+    # print(f"stamp date={add_text}")
+    image_rect = pymupdf.Rect(275.0, 5.0, 440.0, 20.0) # pymupdf.Rect(510.0, 10.0, 585.0, 70.0)
+    page.insert_image(image_rect, stream=image_data)
+    page.insert_text(point, "Filed", fontsize=10, fontname="Helvetica-Bold", color=(0, 0, 0)) # Black color
+    x_coord += pymupdf.get_text_length("Filed", fontname="Helvetica-Bold", fontsize=10)
+    point = pymupdf.Point(x_coord, 17)
+    page.insert_text(point, add_text, fontsize=10, fontname="Helvetica", color=(0, 0, 0)) # Black color
+    updated_pdf = doc.tobytes(garbage=3, clean=True, deflate=True, deflate_images=True, deflate_fonts=True)
+    doc.close()
+    with open(outfile, "wb") as pdf_file:
         pdf_file.write(updated_pdf)
         pdf_file.close()
