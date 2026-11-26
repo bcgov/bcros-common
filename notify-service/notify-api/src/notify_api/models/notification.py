@@ -21,7 +21,7 @@ from email_validator import EmailNotValidError, validate_email
 from flask import current_app
 import phonenumbers
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 
 from notify_api.utils.base import BaseEnum
 from notify_api.utils.util import to_camel
@@ -159,6 +159,7 @@ class Notification(db.Model):
         FAILURE = auto()
         FORWARDED = auto()
         EXPIRED = auto()
+        HELD = auto()
 
     class NotificationProvider(BaseEnum):
         """Enum for the Notification Provider."""
@@ -247,6 +248,11 @@ class Notification(db.Model):
     # considered unrecoverable and get archived (moved to history, deleted here).
     ARCHIVE_AFTER_DAYS = 30
 
+    SMS_PROVIDERS = (
+        NotificationProvider.BC_NOTIFY_SMS,
+        NotificationProvider.BC_NOTIFY_HOUSING_SMS,
+    )
+
     @classmethod
     def _config_int(cls, key: str, default: int) -> int:
         """Read an int override from the current app config, falling back to a default.
@@ -258,13 +264,17 @@ class Notification(db.Model):
         return current_app.config.get(key, default)
 
     @classmethod
-    def find_resend_notifications(cls):
+    def find_resend_notifications(cls, include_email: bool = True, include_sms: bool = True):
         """Return Notifications that need to resend.
 
         Excludes notifications that are:
           - too young (may still be in-flight, not yet processed)
           - too old (time-sensitive content has expired; resending is stale/wrong)
           - already exhausted their retry budget
+
+        HELD notifications were never published, so they are always returned regardless
+        of age or retry count. ``include_email`` / ``include_sms`` exclude a channel
+        (e.g. while its hold flag is on).
         """
         resend_statuses = (
             Notification.NotificationStatus.QUEUED.value,
@@ -280,12 +290,25 @@ class Notification(db.Model):
         oldest_allowed = now - timedelta(hours=max_age_hours)
         newest_allowed = now - timedelta(minutes=min_age_minutes)
 
-        return cls.query.filter(
-            Notification.status_code.in_(resend_statuses),
-            Notification.request_date >= oldest_allowed,
-            Notification.request_date <= newest_allowed,
-            Notification.retry_count < max_retry_count,
-        ).all()
+        query = cls.query.filter(
+            or_(
+                and_(
+                    Notification.status_code.in_(resend_statuses),
+                    Notification.request_date >= oldest_allowed,
+                    Notification.request_date <= newest_allowed,
+                    Notification.retry_count < max_retry_count,
+                ),
+                Notification.status_code == Notification.NotificationStatus.HELD,
+            )
+        )
+
+        is_sms = Notification.provider_code.in_(cls.SMS_PROVIDERS)
+        if not include_sms:
+            query = query.filter(or_(Notification.provider_code.is_(None), ~is_sms))
+        if not include_email:
+            query = query.filter(is_sms)
+
+        return query.all()
 
     @classmethod
     def find_archivable_notifications(cls):
@@ -295,7 +318,8 @@ class Notification(db.Model):
         (PENDING/QUEUED/FAILURE), non-BC SENT rows that failed to be cleaned up
         after a successful delivery, and EXPIRED rows left active by an
         interrupted archive operation. BC Notify SENT rows remain active until
-        their terminal callback arrives.
+        their terminal callback arrives. HELD rows are never archived; they wait
+        for the hold flag to be turned off.
         """
         archivable_statuses = (
             Notification.NotificationStatus.PENDING.value,

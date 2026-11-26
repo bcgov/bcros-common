@@ -117,8 +117,13 @@ class Config:  # pylint: disable=too-few-public-methods
 
     # Notification provider fallbacks, used when LaunchDarkly (LD_SDK_KEY) is not configured.
     # BC Notify providers are controlled only by LaunchDarkly and are off without it.
-    GC_NOTIFY_ENABLE = env_truthy("GC_NOTIFY_ENABLE", "true")
-    BC_NOTIFY_SMS_ENABLE = env_truthy("BC_NOTIFY_SMS_ENABLE", "true")
+    GC_NOTIFY_ENABLE = env_truthy("GC_NOTIFY_ENABLE", "false")
+    BC_NOTIFY_SMS_ENABLE = env_truthy("BC_NOTIFY_SMS_ENABLE", "false")
+
+    # Hold fallbacks for the queue-emails / queue-sms flags: when on, new notifications are stored
+    # as HELD without being sent, and the resend job skips that channel until the hold is lifted.
+    QUEUE_EMAILS = env_truthy("QUEUE_EMAILS", "false")
+    QUEUE_SMS = env_truthy("QUEUE_SMS", "false")
 
     # Shared secret for verifying BC Notify's X-Webhook-Signature; JWT auth is used when unset.
     BC_NOTIFY_WEBHOOK_SECRET = os.getenv("BC_NOTIFY_WEBHOOK_SECRET", None)

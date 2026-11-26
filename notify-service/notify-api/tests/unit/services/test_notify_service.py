@@ -28,14 +28,14 @@ class TestNotifyServiceProviderSelection:
     @staticmethod
     def test_get_provider_strr_request(app):
         """STRR requests route to HOUSING when BC Notify Housing is disabled."""
-        with app.app_context():
+        with app.app_context(), patch.dict(app.config, {"GC_NOTIFY_ENABLE": True}):
             provider = NotifyService.get_provider("STRR", "Any content")
             assert provider == Notification.NotificationProvider.HOUSING
 
     @staticmethod
     def test_get_provider_strr_request_lowercase(app):
         """STRR requests (lowercase) route to HOUSING when BC Notify Housing is disabled."""
-        with app.app_context():
+        with app.app_context(), patch.dict(app.config, {"GC_NOTIFY_ENABLE": True}):
             provider = NotifyService.get_provider("strr", "Any content")
             assert provider == Notification.NotificationProvider.HOUSING
 
@@ -838,7 +838,7 @@ class TestNotifyServiceSms:
     @staticmethod
     def test_queue_publish_sms_queues_each_recipient_as_text(app):
         """Each SMS recipient is saved as a TEXT notification for the BC Notify SMS provider."""
-        with app.app_context():
+        with app.app_context(), patch.dict(app.config, {"BC_NOTIFY_SMS_ENABLE": True}):
             app.config["DELIVERY_BC_NOTIFY_SMS_TOPIC"] = "test-bc-notify-sms-topic"
             sms_request = SmsRequest(recipients="2505550123, +16045550147", requestBy="test", body="Hello")
             queued = Mock(recipients="+12505550123", status_code=Notification.NotificationStatus.QUEUED)
@@ -859,7 +859,7 @@ class TestNotifyServiceSms:
     @pytest.mark.parametrize("request_by", ["STRR", "strr"])
     def test_queue_publish_sms_housing_uses_housing_topic(app, request_by):
         """Housing (STRR) SMS uses the BC Notify Housing SMS provider and topic."""
-        with app.app_context():
+        with app.app_context(), patch.dict(app.config, {"BC_NOTIFY_SMS_ENABLE": True}):
             app.config["DELIVERY_BC_NOTIFY_HOUSING_SMS_TOPIC"] = "test-bc-notify-housing-sms-topic"
             sms_request = SmsRequest(recipients="+12505550123", requestBy=request_by, body="Hello")
 

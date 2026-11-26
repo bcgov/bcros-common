@@ -58,10 +58,16 @@ BC_NOTIFY_HOUSING_API_KEY = "e2e-housing-key"  # noqa: S105
 
 @pytest.fixture(scope="session")
 def feature_flags():
-    """Serve every provider flag as on from an offline LaunchDarkly client; tests may update it."""
+    """Serve every provider flag as on and the hold flags as off from an offline LaunchDarkly client.
+
+    Tests may update it.
+    """
+    hold_flags = {FeatureFlag.QUEUE_EMAILS, FeatureFlag.QUEUE_SMS}
     data_source = TestData.data_source()
     for flag in FeatureFlag:
-        data_source.update(data_source.flag(str(flag)).variation_for_all(True))
+        data_source.update(
+            data_source.flag(str(flag)).variation_for_all(flag not in hold_flags)
+        )
 
     client = LDClient(
         LDConfig("e2e-sdk-key", update_processor_class=data_source, send_events=False)

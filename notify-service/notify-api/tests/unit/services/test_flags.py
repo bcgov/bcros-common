@@ -245,3 +245,85 @@ class TestResendToggles:
             assert NotifyService._republish_single_notification(notification) is False
 
         queue.publish.assert_not_called()
+
+
+class TestHoldFlags:
+    """The queue-emails / queue-sms flags hold new notifications and pause the resend job per channel."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("provider", "values", "held"),
+        [
+            (Notification.NotificationProvider.GC_NOTIFY, {FeatureFlag.QUEUE_EMAILS: True}, True),
+            (Notification.NotificationProvider.BC_NOTIFY_SMS, {FeatureFlag.QUEUE_SMS: True}, True),
+            (Notification.NotificationProvider.GC_NOTIFY, {FeatureFlag.QUEUE_SMS: True}, False),
+            (Notification.NotificationProvider.BC_NOTIFY_SMS, {FeatureFlag.QUEUE_EMAILS: True}, False),
+        ],
+    )
+    def test_held_channel_is_stored_without_publishing(app, provider, values, held):
+        """Only the held channel is stored as HELD and skips the delivery publish."""
+        request = Mock(recipients="recipient")
+        created = Mock(id=7, product=None)
+        expected_status = Notification.NotificationStatus.HELD if held else Notification.NotificationStatus.QUEUED
+
+        with (
+            app.app_context(),
+            _flag_values(values),
+            patch.object(NotifyService, "_get_delivery_topic", return_value="topic"),
+            patch.object(Notification, "create_notification", return_value=created),
+            patch.object(NotifyService, "_update_notification_status") as update_status,
+            patch("notify_api.services.notify_service.GcpQueue"),
+            patch("notify_api.services.notify_service.queue") as queue,
+        ):
+            result = NotifyService._queue_recipients(request, provider, ["recipient"])
+
+        assert queue.publish.called is not held
+        assert update_status.call_args.args[2] == expected_status
+        assert result._cached_response["notifyStatus"] == expected_status.name
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("values", "expected"),
+        [
+            ({}, {"include_email": True, "include_sms": True}),
+            ({FeatureFlag.QUEUE_EMAILS: True}, {"include_email": False, "include_sms": True}),
+            ({FeatureFlag.QUEUE_SMS: True}, {"include_email": True, "include_sms": False}),
+        ],
+    )
+    def test_republish_excludes_held_channel(app, values, expected):
+        """The resend job only looks up notifications for channels that are not held."""
+        with (
+            app.app_context(),
+            _flag_values(values),
+            patch.object(NotifyService, "archive_expired_notifications") as archive,
+            patch.object(Notification, "find_resend_notifications", return_value=[]) as find,
+        ):
+            NotifyService.queue_republish()
+
+        archive.assert_called_once()
+        find.assert_called_once_with(**expected)
+
+    @staticmethod
+    def test_republish_does_nothing_when_all_held(app):
+        """With email and SMS held, the resend job neither archives nor republishes."""
+        with (
+            app.app_context(),
+            _flag_values({FeatureFlag.QUEUE_EMAILS: True, FeatureFlag.QUEUE_SMS: True}),
+            patch.object(NotifyService, "archive_expired_notifications") as archive,
+            patch.object(Notification, "find_resend_notifications") as find,
+        ):
+            NotifyService.queue_republish()
+
+        archive.assert_not_called()
+        find.assert_not_called()
+
+    @staticmethod
+    def test_hold_defaults_to_config(app):
+        """Without LaunchDarkly, the hold follows the QUEUE_EMAILS config fallback."""
+        with app.app_context():
+            app.config["QUEUE_EMAILS"] = True
+            try:
+                assert NotifyService._is_held(Notification.NotificationProvider.SMTP) is True
+                assert not NotifyService._is_held(Notification.NotificationProvider.BC_NOTIFY_SMS)
+            finally:
+                app.config["QUEUE_EMAILS"] = False

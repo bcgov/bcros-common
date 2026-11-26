@@ -178,6 +178,26 @@ class TestBCNotify(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertEqual(BCNotify._determine_body_type(body), expected_type)
 
+    def test_markdown_single_newlines_become_hard_breaks(self):
+        """Markdown lines separated by one newline should keep their line breaks; text bodies are untouched."""
+        examples = (
+            (
+                "# Title \n**Account Number:** 123456 \n**Account Name:** test\r\nEmail: [a](b)",
+                "# Title  \n**Account Number:** 123456  \n**Account Name:** test  \nEmail: [a](b)",
+            ),
+            ("**Hello**\n\nParagraph\n", "**Hello**\n\nParagraph\n"),
+            ("**Code**\n```\na = 1\nb = 2\n```\nafter", "**Code**  \n```\na = 1\nb = 2\n```\nafter"),
+        )
+        for body, expected in examples:
+            with self.subTest(body=body):
+                content = Mock(subject="Subject", body=body, attachments=None)
+                payload = BCNotify(Mock(spec=Notification))._build_payload("user@example.com", content)
+                self.assertEqual(payload["content"]["body"], expected)
+
+        content = Mock(subject="Subject", body="line one\nline two", attachments=None)
+        payload = BCNotify(Mock(spec=Notification))._build_payload("user@example.com", content)
+        self.assertEqual(payload["content"]["body"], "line one\nline two")
+
     @patch("notify_delivery.services.providers.bc_notify.requests.post")
     def test_send_includes_attachments_in_payload(self, mock_post):
         """send() should base64-encode attachments and guess their mime type."""

@@ -57,6 +57,11 @@ PROVIDER_FLAGS: dict[str, tuple[FeatureFlag, str | None]] = {
     ),
 }
 
+# Hold flags and their fallback config keys: when on, new notifications for that channel are stored as HELD
+# (not published) and the resend job skips the channel; once off, the resend job releases HELD notifications.
+EMAIL_HOLD_FLAG: tuple[FeatureFlag, str] = (FeatureFlag.QUEUE_EMAILS, "QUEUE_EMAILS")
+SMS_HOLD_FLAG: tuple[FeatureFlag, str] = (FeatureFlag.QUEUE_SMS, "QUEUE_SMS")
+
 
 class _HTMLTagDetector(HTMLParser):
     """Detect whether a body contains HTML tags."""
@@ -191,6 +196,12 @@ class NotifyService:
         if not flag_config:
             return True
         return cls._is_enabled(*flag_config)
+
+    @classmethod
+    def _is_held(cls, provider: str | None) -> bool:
+        """Return whether the channel (SMS or email) of the provider is currently held."""
+        is_sms = provider in Notification.SMS_PROVIDERS
+        return cls._is_enabled(*(SMS_HOLD_FLAG if is_sms else EMAIL_HOLD_FLAG))
 
     @classmethod
     def _resolve_resend_provider(cls, provider: str) -> str | None:
@@ -485,7 +496,11 @@ class NotifyService:
     def _queue_recipients(
         notification_request: NotificationRequest, provider: str, safe_recipients: list[str]
     ) -> Notification:
-        """Create a notification per recipient and publish each to the provider's delivery topic."""
+        """Create a notification per recipient and publish each to the provider's delivery topic.
+
+        When the provider's channel is held (queue-emails / queue-sms flag), notifications are stored as
+        HELD and not published; the resend job publishes them once the hold is lifted.
+        """
         delivery_topic = NotifyService._get_delivery_topic(provider)
         if not delivery_topic:
             logger.error(f"No delivery topic configured for provider: {provider}")
@@ -493,6 +508,10 @@ class NotifyService:
             notification.recipients = notification_request.recipients
             notification.status_code = Notification.NotificationStatus.FAILURE
             return notification
+
+        held = NotifyService._is_held(provider)
+        if held:
+            logger.info(f"Holding notifications for provider {provider}: the hold feature flag is on")
 
         # Only include notificationId; the delivery service will fetch the full
         # notification from the database. Including the full request (with large
@@ -509,7 +528,7 @@ class NotifyService:
                 continue
 
             notification = NotifyService._process_single_recipient(
-                clean_recipient, notification_request, provider, delivery_topic, notification_data
+                clean_recipient, notification_request, provider, delivery_topic, notification_data, held=held
             )
             if notification:
                 successful_notifications.append(notification)
@@ -520,7 +539,9 @@ class NotifyService:
                 notification.status_code = Notification.NotificationStatus.FAILURE
                 return notification
 
-        logger.info(f"Successfully queued notifications for {len(successful_notifications)} recipients")
+        logger.info(
+            f"Successfully {'held' if held else 'queued'} notifications for {len(successful_notifications)} recipients"
+        )
 
         # If multiple recipients were handled, they are all queued, but API returns one object structure
         if successful_notifications:
@@ -528,16 +549,20 @@ class NotifyService:
 
         notification = Notification()
         notification.recipients = ",".join(safe_recipients)
-        notification.status_code = Notification.NotificationStatus.QUEUED
+        notification.status_code = (
+            Notification.NotificationStatus.HELD if held else Notification.NotificationStatus.QUEUED
+        )
         return notification
 
     @staticmethod
-    def _process_single_recipient(
+    def _process_single_recipient(  # noqa: PLR0913 - held is a keyword-only switch
         recipient: str,
         notification_request: NotificationRequest,
         provider: str,
         delivery_topic: str,
         notification_data: dict,
+        *,
+        held: bool = False,
     ) -> Notification | None:
         """Process notification for a single recipient.
 
@@ -547,6 +572,7 @@ class NotifyService:
             provider: The notification provider
             delivery_topic: The delivery topic
             notification_data: The notification data template
+            held: Store the notification as HELD without publishing it
 
         Returns:
             The created Notification object if successful, None otherwise
@@ -562,17 +588,20 @@ class NotifyService:
             cached_id = notification.id
             notification_data["notificationId"] = cached_id
 
-            # Create and publish cloud event
-            cloud_event = NotifyService._create_cloud_event(provider, notification_data)
-            publish_future = queue.publish(delivery_topic, GcpQueue.to_queue_message(cloud_event))
+            if held:
+                status = Notification.NotificationStatus.HELD
+                logger.info(f"Held notification ID {cached_id} for {recipient} - not published")
+            else:
+                status = Notification.NotificationStatus.QUEUED
+                cloud_event = NotifyService._create_cloud_event(provider, notification_data)
+                publish_future = queue.publish(delivery_topic, GcpQueue.to_queue_message(cloud_event))
 
-            logger.info(
-                f"Queued notification for {recipient} - Subject: {notification_request.content.subject} - "
-                f"Future: {publish_future}"
-            )
+                logger.info(
+                    f"Queued notification for {recipient} - Subject: {notification_request.content.subject} - "
+                    f"Future: {publish_future}"
+                )
 
-            # Update notification status
-            NotifyService._update_notification_status(notification, provider, Notification.NotificationStatus.QUEUED)
+            NotifyService._update_notification_status(notification, provider, status)
 
             # Attach a cached response so the caller can safely build a JSON
             # reply without touching SQLAlchemy-managed attributes (which may
@@ -581,7 +610,7 @@ class NotifyService:
                 "id": cached_id,
                 "recipients": recipient,
                 "product": notification.product,
-                "notifyStatus": Notification.NotificationStatus.QUEUED.name,
+                "notifyStatus": status.name,
             }
 
             return notification
@@ -606,13 +635,28 @@ class NotifyService:
 
         This method archives any notifications that have been stuck for too
         long (see archive_expired_notifications), then finds the remaining
-        notifications that need to be resent and republishes them to the
-        appropriate queue based on their provider.
+        notifications that need to be resent (including HELD ones) and
+        republishes them to the appropriate queue based on their provider.
+
+        A channel whose hold flag (queue-emails / queue-sms) is on is skipped;
+        when both are on, the job does nothing.
         """
+        hold_email = NotifyService._is_enabled(*EMAIL_HOLD_FLAG)
+        hold_sms = NotifyService._is_enabled(*SMS_HOLD_FLAG)
+        if hold_email and hold_sms:
+            logger.info("Email and SMS are held by feature flags - skipping resend job")
+            return
+        if hold_email or hold_sms:
+            logger.info(
+                f"{'Email' if hold_email else 'SMS'} is held by feature flag - resending the other channel only"
+            )
+
         NotifyService.archive_expired_notifications()
 
         try:
-            notifications = Notification.find_resend_notifications()
+            notifications = Notification.find_resend_notifications(
+                include_email=not hold_email, include_sms=not hold_sms
+            )
 
             if not notifications:
                 logger.info("No notifications found for republishing")
