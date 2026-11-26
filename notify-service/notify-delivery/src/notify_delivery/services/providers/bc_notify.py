@@ -149,6 +149,24 @@ class BCNotify:
             return "html"
         return "text"
 
+    @staticmethod
+    def _hard_line_breaks(body: str) -> str:
+        """Turn single newlines into Markdown hard breaks so each line renders on its own line.
+
+        Markdown treats a lone newline as a space; two trailing spaces force a line break. Blank
+        lines (paragraph breaks) and fenced code blocks are left unchanged.
+        """
+        lines = body.replace("\r\n", "\n").split("\n")
+        in_fence = False
+        for index, line in enumerate(lines[:-1]):
+            if re.match(r"^\s{0,3}(```|~~~)", line):
+                in_fence = not in_fence
+                continue
+            if in_fence or not line.strip() or not lines[index + 1].strip():
+                continue
+            lines[index] = line.rstrip() + "  "
+        return "\n".join(lines)
+
     def _build_url(self) -> str:
         """Return the BC Notify send endpoint."""
         return f"{self.bc_notify_url.rstrip('/')}/api/v1/notifysimple/email"
@@ -160,12 +178,14 @@ class BCNotify:
         if deployment_env != "production":
             subject += f" - from {deployment_env.upper()} environment"
 
+        body_type = self._determine_body_type(content.body)
+        body = self._hard_line_breaks(content.body) if body_type == "markdown" else content.body
         payload = {
             "recipients": {"to": [recipient]},
             "content": {
                 "subject": subject,
-                "body": content.body,
-                "bodyType": self._determine_body_type(content.body),
+                "body": body,
+                "bodyType": body_type,
             },
         }
 
