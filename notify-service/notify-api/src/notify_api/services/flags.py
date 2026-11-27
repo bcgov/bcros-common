@@ -36,6 +36,9 @@ class FeatureFlag(StrEnum):
     QUEUE_SMS = "queue-sms"
 
 
+HOLD_FLAGS = frozenset({FeatureFlag.QUEUE_EMAILS, FeatureFlag.QUEUE_SMS})
+
+
 class Flags:
     """Evaluate boolean LaunchDarkly flags, falling back to the supplied default when unavailable."""
 
@@ -62,12 +65,19 @@ class Flags:
     def is_on(self, flag: str, default: bool) -> bool:
         """Return the flag value, or *default* if LaunchDarkly is not available."""
         if not self.client or not self.client.is_initialized():
+            if flag in HOLD_FLAGS:
+                logger.info(f"Feature flag {flag} value={default} source=config reason=sdk-unavailable")
             return default
         try:
             context = Context.builder(self.CONTEXT_KEY).name(self.CONTEXT_KEY).build()
-            return bool(self.client.variation(str(flag), context, default))
+            detail = self.client.variation_detail(str(flag), context, default)
+            value = bool(detail.value)
+            if flag in HOLD_FLAGS:
+                source = "config" if detail.reason.get("kind") == "ERROR" else "launchdarkly-cache"
+                logger.info(f"Feature flag {flag} value={value} source={source} reason={detail.reason}")
+            return value
         except Exception as err:
-            logger.error(f"Error evaluating feature flag {flag}: {err}")
+            logger.error(f"Error evaluating feature flag {flag}; using config value={default}: {err}")
             return default
 
 

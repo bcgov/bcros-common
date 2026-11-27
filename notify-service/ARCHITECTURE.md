@@ -124,6 +124,8 @@ Housing routing checks `enable-bc-notify-housing`, then `enable-gc-notify`, and 
 
 **Hold flags.** The `queue-emails` flag holds email and the `queue-sms` flag holds SMS. Without LaunchDarkly, they fall back to the `QUEUE_EMAILS` and `QUEUE_SMS` settings, which default to off. While a flag is on, the API still selects a provider and stores each notification. It saves the notification with status `HELD`, returns `notifyStatus: HELD`, and does not publish it to Pub/Sub. The resend job skips the held channel. After the flag is turned off, the next resend run publishes each `HELD` notification, regardless of its age.
 
+Each hold flag evaluation logs its value, source, and evaluation reason. `launchdarkly-cache` does not guarantee that the streaming connection is current; `config` indicates a fallback.
+
 ### 3.3 notify-delivery
 
 **Purpose:** Receive queued work, load the notification, send it through the selected provider, and record the result. Notify (BC) and Notify (BC) Housing notifications stay in `SENT` until the provider sends a final status callback.
