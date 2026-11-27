@@ -20,6 +20,7 @@ import psycopg2
 import pymupdf
 import requests
 from bs4 import BeautifulSoup
+from cloud_sql_connector import close_connector
 
 from colin_report_migration.config import Config
 from colin_report_migration.database import Database
@@ -575,3 +576,9 @@ def job(config: Config):
     finally:
         # Clean up: Close the database cursor and connection
         Database.close_app()
+        if config.DOC_ENGINE:
+            config.DOC_ENGINE.dispose()
+        if config.BUS_ENGINE:
+            config.BUS_ENGINE.dispose()
+        if config.DOC_ENGINE or config.BUS_ENGINE:
+            close_connector()

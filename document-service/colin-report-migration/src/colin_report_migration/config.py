@@ -21,7 +21,9 @@ or by accessing this configuration directly.
 """
 import os
 
+from cloud_sql_connector import DBConfig
 from dotenv import find_dotenv, load_dotenv
+from sqlalchemy import create_engine
 
 load_dotenv(find_dotenv())
 
@@ -46,22 +48,46 @@ class Config:  # pylint: disable=too-few-public-methods
     DB_NAME = os.getenv("DOC_DATABASE_NAME", "")
     DB_HOST = os.getenv("DOC_DATABASE_HOST", "")
     DB_PORT = os.getenv("DOC_DATABASE_PORT", "5432")  # POSTGRESQL
+    CLOUDSQL_INSTANCE_CONNECTION_NAME = os.getenv("CLOUDSQL_INSTANCE_CONNECTION_NAME", None)
+    DB_IP_TYPE = os.getenv("DATABASE_IP_TYPE", "private").lower()
+    DOC_ENGINE = None
 
     # POSTGRESQL DOC database
-    if DB_UNIX_SOCKET := os.getenv("DOC_DATABASE_UNIX_SOCKET", None):
+    if CLOUDSQL_INSTANCE_CONNECTION_NAME:
+        db_config = DBConfig(
+            instance_name=CLOUDSQL_INSTANCE_CONNECTION_NAME,
+            database=DB_NAME,
+            user=DB_USER,
+            ip_type=DB_IP_TYPE,
+            pool_recycle=60,
+            schema="public",
+        )
+        DOC_ENGINE = create_engine("postgresql+pg8000://", **db_config.get_engine_options())
+    elif DB_UNIX_SOCKET := os.getenv("DOC_DATABASE_UNIX_SOCKET", None):
         DOC_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@/{DB_NAME}?host={DB_UNIX_SOCKET}"
     else:
         DOC_DATABASE_URI = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-    # Remove after legacy migration to Postgres
     BUS_DB_USER = os.getenv("BUS_DATABASE_USERNAME")
     BUS_DB_PASSWORD = os.getenv("BUS_DATABASE_PASSWORD")
     BUS_DB_NAME = os.getenv("BUS_DATABASE_NAME")
     BUS_DB_HOST = os.getenv("BUS_DATABASE_HOST")
     BUS_DB_PORT = os.getenv("BUS_DATABASE_PORT")
-
+    BUS_CLOUDSQL_INSTANCE_CONNECTION_NAME = os.getenv("BUS_CLOUDSQL_INSTANCE_CONNECTION_NAME", None)
+    BUS_DB_IP_TYPE = os.getenv("BUS_DATABASE_IP_TYPE", "private").lower()
+    BUS_ENGINE = None
     # POSTGRESQL BUSINESS database
-    if BUS_UNIX_SOCKET := os.getenv("BUS_DATABASE_UNIX_SOCKET", None):
+    if BUS_CLOUDSQL_INSTANCE_CONNECTION_NAME:
+        bus_db_config = DBConfig(
+            instance_name=BUS_CLOUDSQL_INSTANCE_CONNECTION_NAME,
+            database=BUS_DB_NAME,
+            user=BUS_DB_USER,
+            ip_type=BUS_DB_IP_TYPE,
+            pool_recycle=60,
+            schema="public",
+        )
+        BUS_ENGINE = create_engine("postgresql+pg8000://", **bus_db_config.get_engine_options())
+    elif BUS_UNIX_SOCKET := os.getenv("BUS_DATABASE_UNIX_SOCKET", None):
         BUS_DATABASE_URI = f"postgresql://{BUS_DB_USER}:{BUS_DB_PASSWORD}@/{BUS_DB_NAME}?host={BUS_UNIX_SOCKET}"
     else:
         BUS_DATABASE_URI = f"postgresql://{BUS_DB_USER}:{BUS_DB_PASSWORD}@{BUS_DB_HOST}:{BUS_DB_PORT}/{BUS_DB_NAME}"
