@@ -16,6 +16,10 @@
 from unittest.mock import Mock, patch
 
 from flask import Flask
+from ldclient.client import LDClient
+from ldclient.config import Config as LDConfig
+from ldclient.evaluation import EvaluationDetail
+from ldclient.integrations.test_data import TestData
 import pytest
 
 from notify_api.models import Notification, SmsRequest
@@ -57,10 +61,13 @@ class TestFlags:
     def test_variation_is_returned():
         """Flag value comes from the LaunchDarkly client when initialized."""
         flags = Flags()
-        flags.client = Mock(is_initialized=Mock(return_value=True), variation=Mock(return_value=False))
+        flags.client = Mock(
+            is_initialized=Mock(return_value=True),
+            variation_detail=Mock(return_value=EvaluationDetail(False, 0, {"kind": "FALLTHROUGH"})),
+        )
 
         assert flags.is_on(FeatureFlag.GC_NOTIFY, True) is False
-        assert flags.client.variation.call_args.args[0] == "enable-gc-notify"
+        assert flags.client.variation_detail.call_args.args[0] == "enable-gc-notify"
 
     @staticmethod
     def test_uninitialized_client_uses_default():
@@ -69,15 +76,44 @@ class TestFlags:
         flags.client = Mock(is_initialized=Mock(return_value=False))
 
         assert flags.is_on(FeatureFlag.BC_NOTIFY, True) is True
-        flags.client.variation.assert_not_called()
+        flags.client.variation_detail.assert_not_called()
 
     @staticmethod
     def test_evaluation_error_uses_default():
         """Errors during evaluation fall back to the default."""
         flags = Flags()
-        flags.client = Mock(is_initialized=Mock(return_value=True), variation=Mock(side_effect=Exception("boom")))
+        flags.client = Mock(
+            is_initialized=Mock(return_value=True), variation_detail=Mock(side_effect=Exception("boom"))
+        )
 
         assert flags.is_on(FeatureFlag.BC_NOTIFY, True) is True
+
+    @staticmethod
+    def test_hold_flag_logs_sdk_value_and_missing_flag_fallback():
+        """Log whether the hold value came from the SDK cache or a missing flag fallback."""
+        data_source = TestData.data_source()
+        client = LDClient(LDConfig("test-sdk-key", update_processor_class=data_source, send_events=False))
+        flags = Flags()
+        flags.client = client
+        try:
+            with patch("notify_api.services.flags.logger") as logger:
+                assert flags.is_on(FeatureFlag.QUEUE_EMAILS, False) is False
+                assert "value=False source=config" in logger.info.call_args.args[0]
+                assert "FLAG_NOT_FOUND" in logger.info.call_args.args[0]
+
+                data_source.update(data_source.flag("queue-emails").variation_for_all(True))
+                assert flags.is_on(FeatureFlag.QUEUE_EMAILS, False) is True
+                assert "value=True source=launchdarkly-cache" in logger.info.call_args.args[0]
+        finally:
+            client.close()
+
+    @staticmethod
+    def test_hold_flag_logs_unavailable_sdk_fallback():
+        """Log the fallback value when no flag data is available."""
+        flags = Flags()
+        with patch("notify_api.services.flags.logger") as logger:
+            assert flags.is_on(FeatureFlag.QUEUE_EMAILS, False) is False
+        assert "value=False source=config reason=sdk-unavailable" in logger.info.call_args.args[0]
 
 
 def _flag_values(values: dict):
