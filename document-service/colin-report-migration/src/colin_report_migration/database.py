@@ -206,10 +206,34 @@ class Database:  # pylint: disable=too-few-public-methods
     def init_app(config: Config):
         """Set up the job database connections and cursors."""
         logger.info(f"Job {config.JOB_ID} Getting doc database connection and cursor.")
-        Database.doc_db_conn = psycopg2.connect(dsn=config.DOC_DATABASE_URI)
+        if config.DOC_ENGINE:
+            Database.doc_db_conn = config.DOC_ENGINE.raw_connection()
+        elif config.DB_HOST:
+            # Need to do this with IAM token long passwords.
+            Database.doc_db_conn = psycopg2.connect(
+                host=config.DB_HOST,
+                port=config.DB_PORT,
+                dbname=config.DB_NAME,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+            )
+        else:
+            Database.doc_db_conn = psycopg2.connect(dsn=config.DOC_DATABASE_URI)
         Database.doc_db_cursor = Database.doc_db_conn.cursor()
         logger.info(f"Job {config.JOB_ID} Getting business database connection and cursor.")
-        Database.bus_db_conn = psycopg2.connect(dsn=config.BUS_DATABASE_URI)
+        if config.BUS_ENGINE:
+            Database.bus_db_conn = config.BUS_ENGINE.raw_connection()
+        elif config.BUS_DB_HOST:
+            # Need to do this with IAM token long passwords.
+            Database.bus_db_conn = psycopg2.connect(
+                host=config.BUS_DB_HOST,
+                port=config.BUS_DB_PORT,
+                dbname=config.BUS_DB_NAME,
+                user=config.BUS_DB_USER,
+                password=config.BUS_DB_PASSWORD,
+            )
+        else:
+            Database.bus_db_conn = psycopg2.connect(dsn=config.BUS_DATABASE_URI)
         Database.bus_db_cursor = Database.bus_db_conn.cursor()
 
     @staticmethod
